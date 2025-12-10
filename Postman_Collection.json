@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "FAHM API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "rootUrl", "value": "http://localhost:3000" },
+    { "key": "baseUrl", "value": "{{rootUrl}}/api/v1" },
+    { "key": "authToken", "value": "" },
+    { "key": "name", "value": "Jane Doe" },
+    { "key": "email", "value": "jane@example.com" },
+    { "key": "password", "value": "secret123" },
+    { "key": "role", "value": "borrower" },
+    { "key": "phone", "value": "5551234567" },
+    { "key": "loanId", "value": "" },
+    { "key": "borrowerId", "value": "" },
+    { "key": "officerId", "value": "" },
+    { "key": "documentId", "value": "" },
+    { "key": "notificationId", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{rootUrl}}/health"
+      }
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"role\": \"{{role}}\",\n  \"phone\": \"{{phone}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loans",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        { "name": "List Loans", "request": { "method": "GET", "url": "{{baseUrl}}/loans" } },
+        {
+          "name": "Create Loan",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/loans",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 250000,\n  \"borrower\": \"{{borrowerId}}\",\n  \"assignedOfficer\": \"{{officerId}}\",\n  \"status\": \"pending\"\n}"
+            }
+          }
+        },
+        { "name": "Get Loan By Id", "request": { "method": "GET", "url": "{{baseUrl}}/loans/{{loanId}}" } },
+        {
+          "name": "Update Loan Status",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/loans/{{loanId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        { "name": "List For Loan", "request": { "method": "GET", "url": "{{baseUrl}}/documents/{{loanId}}" } },
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/documents",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loan\": \"{{loanId}}\",\n  \"name\": \"W2\",\n  \"type\": \"pdf\",\n  \"url\": \"https://example.com/w2.pdf\"\n}"
+            }
+          }
+        },
+        { "name": "Mark Synced", "request": { "method": "POST", "url": "{{baseUrl}}/documents/{{documentId}}/synced" } }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        { "name": "List Notifications", "request": { "method": "GET", "url": "{{baseUrl}}/notifications" } },
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/notifications",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"New Document\",\n  \"user\": \"{{userId}}\",\n  \"type\": \"info\"\n}"
+            }
+          }
+        },
+        { "name": "Mark Read", "request": { "method": "POST", "url": "{{baseUrl}}/notifications/{{notificationId}}/read" } }
+      ]
+    },
+    {
+      "name": "Users",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        { "name": "Me", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } }
+      ]
+    }
+  ]
+}
