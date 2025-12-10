@@ -47,36 +47,24 @@ assistance.
 • Maintain strict compliance with GLBA, CCPA, and CFPB requirements. 
 • Integrate tightly with all major FAHM systems for seamless end-to-end workflow: 
 Required Integrations 
-System Purpose / Function 
-Total Expert CRM Marketing automation, lead nurturing, and journey-based 
-communications. 
-POS (Blend / Big POS) Borrower onboarding, application completion, and document 
-submission. 
-Encompass LOS Core loan origination system — loan status, milestones, and 
-contacts. 
-System Purpose / Function 
-Xactus Credit 
-Reporting Credit pulls, tri-merge reports, and borrower credit scoring. 
-Optimal Blue Real-time rate and product pricing (web or API integration). 
+System | Purpose / Function 
+Total Expert CRM | Marketing automation, lead nurturing, and journey-based communications. 
+POS (Blend / Big POS) | Borrower onboarding, application completion, and document submission. 
+Encompass LOS | Core loan origination system — loan status, milestones, and contacts. 
+Xactus Credit | Reporting Credit pulls, tri-merge reports, and borrower credit scoring. 
+Optimal Blue | Real-time rate and product pricing (web or API integration). 
  
 3. Target Users 
-User Type Description 
-Borrower Complete loan applications, calculate payments, connect with the 
+User Type | Description 
+Borrower | Complete loan applications, calculate payments, connect with the 
 FAHM team, upload documents, and track progress. 
-Loan Officer (TPO) Manage pipelines and communicate with brokers, borrowers, and 
-partners. 
-Loan Officer 
-(Retail) Oversee direct borrower applications and manage milestones. 
-Broker (TPO) Submit loans and track progress via POS integration. 
-Retail Branch 
-Manager (BM) View branch-level performance, loan metrics, and dashboards. 
-Realtor / Referral 
-Partner 
-Access co-branded borrower updates, receive alerts, and share 
-mobile access. 
-Admin / Executive Monitor performance, manage user access, and ensure compliance. 
-BM Definition: Business Manager (Branch or Regional Manager) – responsible for team 
-oversight, production, and performance reporting. 
+Loan Officer (TPO) | Manage pipelines and communicate with brokers, borrowers, and partners. 
+Loan Officer (Retail) | Oversee direct borrower applications and manage milestones. 
+Broker (TPO) | Submit loans and track progress via POS integration. 
+Retail Branch Manager (BM) | View branch-level performance, loan metrics, and dashboards. 
+Realtor / Referral Partner | Access co-branded borrower updates, receive alerts, and share mobile access. 
+Admin / Executive | Monitor performance, manage user access, and ensure compliance. 
+BM Definition: Business Manager (Branch or Regional Manager) | responsible for team oversight, production, and performance reporting. 
  
 4. Functional Requirements 
 4.1 Encompass Integration (Status / Contacts / Milestones) – BigPOS to handle 
