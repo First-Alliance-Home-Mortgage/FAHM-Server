@@ -10,7 +10,12 @@ router.use(authenticate);
 router.get('/', notificationController.list);
 router.post(
   '/',
-  [body('title').notEmpty(), body('user').optional().isMongoId(), body('type').optional().isString()],
+  [
+    body('title').notEmpty(),
+    body('user').optional().isMongoId(),
+    body('type').optional().isString(),
+    body('forceSend').optional().isBoolean(),
+  ],
   notificationController.create
 );
 router.post('/:id/read', notificationController.markRead);

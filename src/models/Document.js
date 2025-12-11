@@ -6,8 +6,13 @@ const documentSchema = new mongoose.Schema(
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     name: { type: String, required: true },
     type: { type: String, enum: ['pdf', 'png', 'jpg', 'jpeg'], default: 'pdf' },
+    size: { type: Number }, // bytes
+    hash: { type: String, index: true },
     url: { type: String, required: true },
     status: { type: String, enum: ['pending', 'synced'], default: 'pending' },
+    scanned: { type: Boolean, default: false },
+    scannedAt: { type: Date },
+    tempBlobExpiresAt: { type: Date },
   },
   { timestamps: true }
 );

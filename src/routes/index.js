@@ -4,6 +4,8 @@ const loanRoutes = require('./loans');
 const documentRoutes = require('./documents');
 const notificationRoutes = require('./notifications');
 const userRoutes = require('./users');
+const posRoutes = require('./pos');
+const calculatorRoutes = require('./calculator');
 
 const router = express.Router();
 
@@ -12,6 +14,8 @@ router.use('/loans', loanRoutes);
 router.use('/documents', documentRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/users', userRoutes);
+router.use('/pos', posRoutes);
+router.use('/calculator', calculatorRoutes);
 
 module.exports = router;
 

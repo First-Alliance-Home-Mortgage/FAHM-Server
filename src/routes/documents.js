@@ -15,6 +15,8 @@ router.post(
     body('loan').isMongoId(),
     body('name').notEmpty(),
     body('type').optional().isIn(['pdf', 'png', 'jpg', 'jpeg']),
+    body('size').optional().isInt({ min: 1 }),
+    body('hash').notEmpty(),
     body('url').notEmpty(),
   ],
   documentController.upload
