@@ -36,6 +36,9 @@ const options = {
       { name: 'POS Integration', description: 'Point of Sale system integration' },
       { name: 'Encompass Integration', description: 'Encompass LOS real-time sync (status, contacts, milestones, messaging)' },
       { name: 'CRM Integration', description: 'Total Expert CRM integration for marketing journeys and engagement' },
+      { name: 'Credit Reporting', description: 'Xactus credit reporting integration for tri-merge reports and scoring' },
+      { name: 'Rate & Pricing', description: 'Optimal Blue rate sheets, rate locks, and rate alerts' },
+      { name: 'Performance Dashboard', description: 'Power BI embedded analytics, KPIs, and performance metrics' },
     ],
     components: {
       securitySchemes: {

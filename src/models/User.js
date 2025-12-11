@@ -13,7 +13,20 @@ const userSchema = new mongoose.Schema(
       default: roles.BORROWER,
     },
     password: { type: String, required: true, minlength: 6, select: false },
+    azureAdB2CId: { type: String, unique: true, sparse: true, index: true },
+    emailVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    nmls: { type: String, trim: true },
+    title: { type: String, trim: true },
+    photo: { type: String },
+    branch: {
+      name: String,
+      address: String,
+      city: String,
+      state: String,
+      zip: String,
+      phone: String
+    }
   },
   { timestamps: true }
 );

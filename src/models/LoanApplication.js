@@ -22,10 +22,16 @@ const loanApplicationSchema = new mongoose.Schema(
     },
     milestones: [milestoneSchema],
     source: { type: String, enum: ['retail', 'tpo'], default: 'retail' },
+    // Referral source for co-branding
+    referralSource: { type: mongoose.Schema.Types.ObjectId, ref: 'ReferralSource' },
     // Encompass integration fields
     encompassLoanId: { type: String, unique: true, sparse: true },
     lastEncompassSync: { type: Date },
     encompassData: { type: Object }, // Store additional Encompass-specific data
+    // POS integration fields
+    posSystem: { type: String, enum: ['blend', 'big_pos'], sparse: true },
+    posApplicationId: { type: String, sparse: true },
+    lastPOSSync: { type: Date },
   },
   { timestamps: true }
 );

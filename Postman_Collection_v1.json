@@ -21,7 +21,17 @@
     { "key": "userId", "value": "" },
     { "key": "messageId", "value": "" },
     { "key": "contactId", "value": "" },
-    { "key": "journeyId", "value": "" }
+    { "key": "journeyId", "value": "" },
+    { "key": "reportId", "value": "" },
+    { "key": "ssn", "value": "123-45-6789" },
+    { "key": "alertId", "value": "" },
+    { "key": "snapshotId", "value": "" },
+    { "key": "lockId", "value": "" },
+    { "key": "dashboardId", "value": "" },
+    { "key": "referralSourceId", "value": "" },
+    { "key": "sessionId", "value": "" },
+    { "key": "sessionToken", "value": "" },
+    { "key": "applicationId", "value": "" }
   ],
   "item": [
     {
@@ -280,6 +290,2423 @@
             "method": "GET", 
             "url": "{{baseUrl}}/crm/sync/logs?limit=50" 
           } 
+        }
+      ]
+    },
+    {
+      "name": "Credit Reporting",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Request Credit Report",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/credit/loans/{{loanId}}/request",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"borrowerId\": \"{{borrowerId}}\",\n  \"ssn\": \"{{ssn}}\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Portland\",\n    \"state\": \"OR\",\n    \"zip\": \"97201\"\n  },\n  \"pullType\": \"hard\",\n  \"purpose\": \"preapproval\",\n  \"borrowerConsent\": {\n    \"obtained\": true,\n    \"consentDate\": \"2025-12-12T10:00:00Z\"\n  }\n}"
+            }
+          }
+        },
+        { 
+          "name": "Get Credit Report", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/credit/reports/{{reportId}}" 
+          } 
+        },
+        { 
+          "name": "Get Credit Report with Raw Data", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/credit/reports/{{reportId}}?includeRawData=true" 
+          } 
+        },
+        { 
+          "name": "Get Credit Reports for Loan", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/credit/loans/{{loanId}}/reports" 
+          } 
+        },
+        { 
+          "name": "Reissue Credit Report", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/credit/reports/{{reportId}}/reissue" 
+          } 
+        },
+        { 
+          "name": "Get Credit Pull Logs", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/credit/logs?limit=50" 
+          } 
+        },
+        { 
+          "name": "Purge Expired Reports (Admin)", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/credit/expired/purge" 
+          } 
+        }
+      ]
+    },
+    {
+      "name": "Rate & Pricing",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get Current Rates",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rates/current?loanAmount=300000&productType=conventional&loanTerm=30&creditScore=740&ltv=80"
+          }
+        },
+        { 
+          "name": "Get Rate History", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/rates/history?productType=conventional&loanTerm=30&limit=50" 
+          } 
+        },
+        { 
+          "name": "Get Product Pricing", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/rates/products?productType=conventional&loanTerm=30" 
+          } 
+        },
+        {
+          "name": "Create Rate Alert",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rates/alerts",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productType\": \"conventional\",\n  \"loanTerm\": 30,\n  \"targetRate\": 6.5,\n  \"triggerType\": \"below\",\n  \"notificationMethod\": \"all\",\n  \"loan\": \"{{loanId}}\"\n}"
+            }
+          }
+        },
+        { 
+          "name": "Get User Rate Alerts", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/rates/alerts?status=active" 
+          } 
+        },
+        {
+          "name": "Update Rate Alert",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/rates/alerts/{{alertId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetRate\": 6.25,\n  \"notificationMethod\": \"push\"\n}"
+            }
+          }
+        },
+        { 
+          "name": "Cancel Rate Alert", 
+          "request": { 
+            "method": "DELETE", 
+            "url": "{{baseUrl}}/rates/alerts/{{alertId}}" 
+          } 
+        },
+        { 
+          "name": "Check Rate Alerts (LO Only)", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/rates/alerts/check" 
+          } 
+        },
+        {
+          "name": "Submit Rate Lock",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rates/locks",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"rateSnapshotId\": \"{{snapshotId}}\",\n  \"lockPeriod\": 45,\n  \"notes\": \"Locking at market rate before weekend\"\n}"
+            }
+          }
+        },
+        { 
+          "name": "Get Rate Locks for Loan", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/rates/locks/loan/{{loanId}}" 
+          } 
+        },
+        {
+          "name": "Extend Rate Lock (LO Only)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rates/locks/{{lockId}}/extend",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extensionDays\": 15,\n  \"reason\": \"Closing date postponed due to appraisal delay\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance Dashboard",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get Available Reports",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/reports"
+          }
+        },
+        {
+          "name": "Get Report Embed Config",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/reports/{{dashboardId}}/embed"
+          }
+        },
+        {
+          "name": "Get My KPIs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/my-kpis?periodType=monthly"
+          }
+        },
+        {
+          "name": "Get Dashboard Metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/metrics?periodType=monthly&metricType=applications"
+          }
+        },
+        {
+          "name": "Get Branch Performance (BM Only)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/branch-performance?periodType=monthly"
+          }
+        },
+        {
+          "name": "Get Regional Performance (Admin Only)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/regional-performance?periodType=monthly"
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/leaderboard?metricType=applications&periodType=monthly&limit=10"
+          }
+        },
+        {
+          "name": "Refresh Report Dataset (BM/Admin Only)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/dashboard/reports/{{dashboardId}}/refresh"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calculator",
+      "item": [
+        {
+          "name": "Calculate Mortgage Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/calculator",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 400000,\n  \"downPayment\": 80000,\n  \"rate\": 6.5,\n  \"termYears\": 30,\n  \"taxesAnnual\": 4800,\n  \"insuranceAnnual\": 1200,\n  \"hoaMonthly\": 150,\n  \"closingCosts\": 8000,\n  \"includeAmortization\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current Rates from Optimal Blue",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/calculator/rates?loanAmount=300000&productType=conventional&loanTerm=30&creditScore=740&ltv=80",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Amortization Schedule",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/calculator/amortization",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 320000,\n  \"rate\": 6.5,\n  \"termYears\": 30,\n  \"startMonth\": 1,\n  \"monthsToGenerate\": 12\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Full Amortization (360 months)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/calculator/amortization",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 320000,\n  \"rate\": 6.5,\n  \"termYears\": 30,\n  \"startMonth\": 1,\n  \"monthsToGenerate\": 360\n}"
+            }
+          }
+        },
+        {
+          "name": "Generate Apply Now Link",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/calculator/apply",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanAmount\": 320000,\n  \"propertyValue\": 400000,\n  \"productType\": \"conventional\",\n  \"loanTerm\": 30,\n  \"estimatedRate\": 6.5\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Upload",
+      "item": [
+        {
+          "name": "Upload Documents to Loan",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/document-uploads/upload",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "loanId", "value": "{{loanId}}", "type": "text" },
+                { "key": "documentType", "value": "paystub", "type": "text" },
+                { "key": "description", "value": "Recent paystubs", "type": "text" },
+                { "key": "posSystem", "value": "blend", "type": "text" },
+                { "key": "files", "type": "file", "src": [] }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Documents for Loan",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/document-uploads/loan/{{loanId}}?status=synced&documentType=paystub",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Document Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/document-uploads/{{documentId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Download Document",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/document-uploads/{{documentId}}/download",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/document-uploads/{{documentId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Retry POS Sync (LO/Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/document-uploads/{{documentId}}/retry-sync",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"posSystem\": \"blend\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Business Cards",
+      "item": [
+        {
+          "name": "Create or Update My Business Card",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/business-cards",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nmls\": \"123456\",\n  \"title\": \"Senior Loan Officer\",\n  \"bio\": \"Helping families achieve homeownership for over 10 years\",\n  \"phone\": \"555-123-4567\",\n  \"email\": \"john.doe@fahm.com\",\n  \"branch\": {\n    \"name\": \"FAHM Downtown Branch\",\n    \"address\": \"123 Main St\",\n    \"city\": \"Los Angeles\",\n    \"state\": \"CA\",\n    \"zip\": \"90001\",\n    \"phone\": \"555-100-2000\"\n  },\n  \"socialLinks\": {\n    \"linkedin\": \"https://linkedin.com/in/johndoe\",\n    \"facebook\": \"https://facebook.com/johndoe\"\n  },\n  \"branding\": {\n    \"partnerLogo\": \"https://partner.com/logo.png\",\n    \"partnerName\": \"ABC Realty Partners\"\n  },\n  \"isPublic\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Business Card",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/business-cards/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Business Card by Slug (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/business-cards/slug/john-doe"
+          }
+        },
+        {
+          "name": "Get My Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/business-cards/me/analytics",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Track Apply Now Click",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/business-cards/slug/john-doe/apply"
+          }
+        },
+        {
+          "name": "Track Share",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/business-cards/slug/john-doe/share",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"qr\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Regenerate QR Code",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/business-cards/me/regenerate-qr",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "List All Business Cards (Admin/BM)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/business-cards?page=1&limit=20&search=john",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Delete My Business Card",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/business-cards/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Preapproval Letters",
+      "item": [
+        {
+          "name": "Generate Preapproval Letter",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/preapproval/generate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"validityDays\": 90,\n  \"conditions\": [\n    {\n      \"description\": \"Subject to satisfactory appraisal of the property\",\n      \"required\": true\n    },\n    {\n      \"description\": \"Subject to verification of employment and income\",\n      \"required\": true\n    },\n    {\n      \"description\": \"Subject to clear title and homeowner's insurance\",\n      \"required\": true\n    }\n  ],\n  \"branding\": {\n    \"partnerLogo\": \"https://partner.com/logo.png\",\n    \"partnerName\": \"ABC Realty Partners\",\n    \"primaryColor\": \"#003B5C\",\n    \"secondaryColor\": \"#FF6B35\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Preapproval Letters by Loan",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/preapproval/loan/{{loanId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Preapproval Letter Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Download Preapproval Letter PDF",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}/download",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Share Preapproval Letter via Email",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}/share",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"email\",\n  \"recipient\": \"borrower@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Share Preapproval Letter via SMS",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}/share",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"sms\",\n  \"recipient\": \"+15555555555\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Generate Shareable Link",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}/share",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"link\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Regenerate Preapproval Letter",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}/regenerate",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Delete Preapproval Letter",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/preapproval/{{preapprovalId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consent Management",
+      "item": [
+        {
+          "name": "Request Consent from Borrower",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/consent/request",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"borrowerId\": \"{{borrowerId}}\",\n  \"loanId\": \"{{loanId}}\",\n  \"dataScope\": {\n    \"personalInfo\": true,\n    \"financialInfo\": false,\n    \"loanDetails\": true,\n    \"documents\": false,\n    \"milestones\": true,\n    \"communications\": true\n  },\n  \"purpose\": \"referral_partnership\",\n  \"purposeDescription\": \"To provide updates on loan progress and coordinate closing timeline\",\n  \"expirationDays\": 365\n}"
+            }
+          }
+        },
+        {
+          "name": "Grant Consent (Borrower Approves)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/consent/{{consentId}}/grant",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Revoke Consent",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/consent/{{consentId}}/revoke",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"No longer working with this partner\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Consents",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/consent?status=active",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Consent Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/consent/{{consentId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Check Access to Borrower Data",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/consent/check-access?borrowerId={{borrowerId}}&dataScope=loanDetails",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Log Consent Access",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/consent/{{consentId}}/log-access",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"details\": \"Viewed loan status and milestones\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Persona Views",
+      "item": [
+        {
+          "name": "Get My Persona View Configuration",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/persona-views/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Update My Persona View",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/persona-views/me",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"viewConfiguration\": {\n    \"dashboard\": {\n      \"layout\": \"grid\",\n      \"defaultFilters\": {\n        \"dateRange\": \"last-30-days\",\n        \"status\": [\"in_progress\", \"underwriting\"]\n      }\n    },\n    \"preferences\": {\n      \"theme\": \"dark\"\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Persona View to Default",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/persona-views/me/reset",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        },
+        {
+          "name": "Get Persona-Specific Dashboard Data",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/persona-views/dashboard",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Referral Sources",
+      "item": [
+        {
+          "name": "Create Referral Source",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Smith\",\n  \"type\": \"realtor\",\n  \"companyName\": \"Smith Realty Group\",\n  \"email\": \"john@smithrealty.com\",\n  \"phone\": \"+15555551234\",\n  \"website\": \"https://www.smithrealty.com\",\n  \"branding\": {\n    \"logo\": \"https://storage.azure.com/logos/smith-realty.png\",\n    \"primaryColor\": \"#1E3A8A\",\n    \"secondaryColor\": \"#F59E0B\",\n    \"tagline\": \"Your Trusted Real Estate Partner\"\n  },\n  \"partnershipTier\": \"gold\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources"]
+            }
+          }
+        },
+        {
+          "name": "Get All Referral Sources",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources?status=active&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Referral Source by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Referral Source",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.updated@smithrealty.com\",\n  \"phone\": \"+15555555678\",\n  \"partnershipTier\": \"platinum\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Referral Source Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id/analytics?startDate=2025-01-01&endDate=2025-12-31&periodType=monthly",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id", "analytics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                },
+                {
+                  "key": "periodType",
+                  "value": "monthly"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Top Performers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/top-performers?limit=10&metric=revenue.totalLoanVolume",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", "top-performers"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "metric",
+                  "value": "revenue.totalLoanVolume"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Branding Config (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id/branding",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id", "branding"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Branding",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branding\": {\n    \"logo\": \"https://storage.azure.com/logos/smith-realty-new.png\",\n    \"primaryColor\": \"#1E40AF\",\n    \"secondaryColor\": \"#F59E0B\",\n    \"tagline\": \"Building Dreams, One Home at a Time\"\n  },\n  \"coBrandingSettings\": {\n    \"enablePreapprovalLetters\": true,\n    \"enableBusinessCards\": true,\n    \"enableEmailCommunications\": true\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id/branding",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id", "branding"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Track Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityType\": \"funded\",\n  \"loanAmount\": 350000,\n  \"productType\": \"conventional\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id/track",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id", "track"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Referral Source",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/referral-sources/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["referral-sources", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{referralSourceId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "POS Link",
+      "item": [
+        {
+          "name": "Generate POS Link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"posSystem\": \"blend\",\n  \"purpose\": \"new_application\",\n  \"source\": \"mobile_app\",\n  \"expirationMinutes\": 60,\n  \"returnUrl\": \"https://app.fahm.com/dashboard\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Activate Session",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionToken\": \"{{sessionToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/activate/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "activate", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Track Event",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"page_view\",\n  \"details\": {\n    \"page\": \"application_start\",\n    \"timestamp\": \"2025-12-12T10:00:00Z\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/track/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "track", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POS Callback",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oauthToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"completionData\": {\n    \"applicationId\": \"APP123456\",\n    \"loanNumber\": \"LN00123456\",\n    \"encompassLoanId\": \"ENC789012\",\n    \"status\": \"submitted\",\n    \"completedSteps\": [\"personal_info\", \"employment\", \"assets\", \"property\"],\n    \"documentsSubmitted\": [\n      {\n        \"documentType\": \"paystub\",\n        \"fileName\": \"paystub_2025_12.pdf\",\n        \"uploadedAt\": \"2025-12-12T11:30:00Z\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/callback/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "callback", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/session/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "session", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Session Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/analytics/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "analytics", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/my-sessions?status=active&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "my-sessions"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get LO Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/lo-sessions?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "lo-sessions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"User changed their mind\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos-link/cancel/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos-link", "cancel", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SMS",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{authToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Send SMS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"+12025551234\",\n  \"body\": \"Your loan application has been approved! Contact your loan officer for next steps.\",\n  \"loanId\": \"{{loanId}}\",\n  \"messageType\": \"notification\",\n  \"purpose\": \"loan_update\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sms/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "send"]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sms/conversation/:phone?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "conversation", ":phone"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "phone",
+                  "value": "+12025551234"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Loan Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sms/loan/:loanId?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "loan", ":loanId"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "loanId",
+                  "value": "{{loanId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sms/my-messages?page=1&limit=50&direction=outbound",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "my-messages"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "direction",
+                  "value": "outbound"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Message as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sms/:messageId/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", ":messageId", "read"],
+              "variable": [
+                {
+                  "key": "messageId",
+                  "value": "{{messageId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get SMS Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sms/stats?startDate=2024-01-01&endDate=2024-12-31&loanId={{loanId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                },
+                {
+                  "key": "loanId",
+                  "value": "{{loanId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sync to Encompass (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sms/sync-to-encompass",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "sync-to-encompass"]
+            }
+          }
+        },
+        {
+          "name": "Twilio Inbound Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "MessageSid",
+                  "value": "SM1234567890abcdef",
+                  "type": "text"
+                },
+                {
+                  "key": "From",
+                  "value": "+12025551234",
+                  "type": "text"
+                },
+                {
+                  "key": "To",
+                  "value": "+18005551234",
+                  "type": "text"
+                },
+                {
+                  "key": "Body",
+                  "value": "What is the status of my loan?",
+                  "type": "text"
+                },
+                {
+                  "key": "NumMedia",
+                  "value": "0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sms/webhook/receive",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "webhook", "receive"]
+            }
+          }
+        },
+        {
+          "name": "Twilio Status Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "MessageSid",
+                  "value": "SM1234567890abcdef",
+                  "type": "text"
+                },
+                {
+                  "key": "MessageStatus",
+                  "value": "delivered",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sms/webhook/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "webhook", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rate Alerts",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{authToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Rate Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productType\": \"conventional\",\n  \"loanTerm\": 30,\n  \"loanAmount\": 300000,\n  \"creditScore\": 740,\n  \"ltv\": 80,\n  \"propertyType\": \"single_family\",\n  \"triggerType\": \"below\",\n  \"targetRate\": 6.5,\n  \"notificationMethod\": \"all\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts"]
+            }
+          }
+        },
+        {
+          "name": "Get Rate Alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts?status=active&page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Alert Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Alert",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Alert",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetRate\": 6.25,\n  \"notificationMethod\": \"sms\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Alert",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Current Rate",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId/check-rate",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId", "check-rate"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trigger Alert Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId/trigger-check",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId", "trigger-check"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pause Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId/pause",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId", "pause"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resume Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rate-alerts/:alertId/resume",
+              "host": ["{{baseUrl}}"],
+              "path": ["rate-alerts", ":alertId", "resume"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "{{alertId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chatbot",
+      "item": [
+        {
+          "name": "Start Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"initialMessage\": \"What's the status of my loan?\",\n  \"deviceType\": \"mobile\",\n  \"voiceEnabled\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "start"]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"What documents do I need to upload?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/message",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "message"]
+            }
+          }
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/session/:sessionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "session", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/sessions?status=active&limit=10&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "sessions"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Escalate Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Need help understanding underwriting decision\",\n  \"escalationType\": \"in_app_chat\",\n  \"urgency\": \"high\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/session/:sessionId/escalate",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "session", ":sessionId", "escalate"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Close Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"satisfactionRating\": 5,\n  \"feedback\": \"Very helpful, got all my questions answered!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/session/:sessionId/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "session", ":sessionId", "close"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/stats?startDate=2025-01-01&endDate=2025-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Escalated Sessions (LO)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/escalated",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "escalated"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Session (LO)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolutionNotes\": \"Explained underwriting decision and provided timeline for next steps. Borrower satisfied.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chatbot/session/:sessionId/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["chatbot", "session", ":sessionId", "resolve"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "POS Integration",
+      "item": [
+        {
+          "name": "Create Handoff Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/handoff",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "handoff"]
+            }
+          }
+        },
+        {
+          "name": "Initiate POS Application (Blend)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.applicationId) {",
+                  "        pm.collectionVariables.set('applicationId', response.applicationId);",
+                  "        console.log('Application ID saved:', response.applicationId);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"posSystem\": \"blend\",\n  \"returnUrl\": \"https://app.fahm.com/dashboard\",\n  \"logoUrl\": \"https://fahm.com/logo.png\",\n  \"primaryColor\": \"#003B5C\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Initiate POS Application (Big POS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.applicationId) {",
+                  "        pm.collectionVariables.set('applicationId', response.applicationId);",
+                  "        console.log('Application ID saved:', response.applicationId);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"posSystem\": \"big_pos\",\n  \"returnUrl\": \"https://app.fahm.com/dashboard\",\n  \"logoUrl\": \"https://fahm.com/logo.png\",\n  \"primaryColor\": \"#003B5C\",\n  \"secondaryColor\": \"#FF6B35\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Get Application Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pos/application/:applicationId/status?posSystem=blend",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "application", ":applicationId", "status"],
+              "query": [
+                {
+                  "key": "posSystem",
+                  "value": "blend",
+                  "description": "Change to 'big_pos' for Big POS system"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "applicationId",
+                  "value": "{{applicationId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sync Borrower Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"posSystem\": \"blend\",\n  \"borrowerData\": {\n    \"firstName\": \"Jane\",\n    \"lastName\": \"Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"phone\": \"555-123-4567\",\n    \"ssn\": \"123-45-6789\",\n    \"dateOfBirth\": \"1985-05-15\",\n    \"address\": {\n      \"street\": \"123 Main St\",\n      \"city\": \"Anytown\",\n      \"state\": \"CA\",\n      \"zip\": \"90210\"\n    },\n    \"employment\": {\n      \"employer\": \"Tech Corp\",\n      \"jobTitle\": \"Software Engineer\",\n      \"monthlyIncome\": 8500,\n      \"yearsEmployed\": 3\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/application/:applicationId/sync-borrower",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "application", ":applicationId", "sync-borrower"],
+              "variable": [
+                {
+                  "key": "applicationId",
+                  "value": "{{applicationId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pos/application/:applicationId/documents?posSystem=blend",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "application", ":applicationId", "documents"],
+              "query": [
+                {
+                  "key": "posSystem",
+                  "value": "blend",
+                  "description": "Change to 'big_pos' for Big POS system"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "applicationId",
+                  "value": "{{applicationId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"posSystem\": \"big_pos\",\n  \"submissionData\": {\n    \"notes\": \"Requesting priority review for first-time homebuyer\",\n    \"urgency\": \"high\",\n    \"requestedClosingDate\": \"2025-03-15\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/application/:applicationId/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "application", ":applicationId", "submit"],
+              "variable": [
+                {
+                  "key": "applicationId",
+                  "value": "{{applicationId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Blend Webhook Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Blend-Signature",
+                "value": "test_signature",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"application.submitted\",\n  \"applicationId\": \"app_12345\",\n  \"timestamp\": \"2025-01-15T12:00:00Z\",\n  \"data\": {\n    \"status\": \"submitted\",\n    \"borrower\": {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/webhooks/blend",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "webhooks", "blend"]
+            }
+          }
+        },
+        {
+          "name": "Big POS Webhook Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-BigPOS-Signature",
+                "value": "test_signature",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"application.submitted\",\n  \"applicationId\": \"app_12345\",\n  \"timestamp\": \"2025-01-15T12:00:00Z\",\n  \"data\": {\n    \"status\": \"submitted\",\n    \"confirmationNumber\": \"CNF-2025-001\",\n    \"applicant\": {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pos/webhooks/big-pos",
+              "host": ["{{baseUrl}}"],
+              "path": ["pos", "webhooks", "big-pos"]
+            }
+          }
         }
       ]
     }
