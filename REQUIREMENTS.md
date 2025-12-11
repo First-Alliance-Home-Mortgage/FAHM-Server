@@ -1,0 +1,419 @@
+# First Alliance Home Mortgage (FAHM) Mobile Application – Requirements Document
+
+**Version:** 2.2  
+**Date:** November 2025  
+**Prepared by:** Emmanuel (Manny) Ibrahim, Chief Technology Officer  
+**Organization:** First Alliance Home Mortgage (FAHM)
+
+---
+
+## 1. Executive Summary
+
+The First Alliance Home Mortgage (FAHM) Mobile App is a next-generation digital platform connecting borrowers, loan officers, brokers, realtors, and internal teams throughout the mortgage lifecycle.
+
+It delivers an intuitive mobile experience, integrates deeply with FAHM's enterprise systems (CRM, POS, LOS, Credit, and Pricing), and supports both AI-driven automation and human collaboration — creating a single, secure ecosystem that accelerates loan origination, improves transparency, and enhances customer satisfaction.
+
+> **Question:** After closing the loan, what is the driver for the borrower to keep the application on their phone? After closing of loan, perhaps we reach out to the borrower after x period when interest rates drop re: Refinance opportunities.
+
+### Primary Users
+
+- **Borrowers** – Complete loan applications, upload documents, and track progress.
+- **Loan Officers (TPO)** – Manage third-party originated pipelines and communication.
+- **Loan Officers (Retail)** – Manage retail borrower pipelines and milestones.
+- **Brokers (TPO)** – Submit and monitor loans through integrated POS systems.
+- **Retail Branch Managers (BM)** – Oversee branch performance and KPIs.
+- **Realtors / Referral Partners** – Co-brand experiences, share updates, and receive borrower alerts.
+- **Admins / Executives** – Oversee performance dashboards, compliance, and data visibility.
+
+### MBS Requirements / Personas
+
+- Brokers
+- Realtors
+- Processors
+- Loan Officers (Retail and TPO)
+- Branch Managers
+- Borrowers
+
+---
+
+## 2. Objectives
+
+- Provide real-time loan visibility via Encompass integration (status, contacts, milestones).
+- Empower originators and partners with CRM-style performance dashboards.
+- Simplify borrower onboarding with calculators, preapproval letters, and document uploads.
+- Enhance engagement through texting, chatbots, notifications, and AI-driven assistance.
+- Enable co-branded partner experiences for referral and realtor sources.
+- Maintain strict compliance with GLBA, CCPA, and CFPB requirements.
+- Integrate tightly with all major FAHM systems for seamless end-to-end workflow.
+
+### Required Integrations
+
+| System | Purpose / Function |
+|--------|-------------------|
+| **Total Expert CRM** | Marketing automation, lead nurturing, and journey-based communications. |
+| **POS (Blend / Big POS)** | Borrower onboarding, application completion, and document submission. |
+| **Encompass LOS** | Core loan origination system — loan status, milestones, and contacts. |
+| **Xactus Credit** | Reporting Credit pulls, tri-merge reports, and borrower credit scoring. |
+| **Optimal Blue** | Real-time rate and product pricing (web or API integration). |
+
+---
+
+## 3. Target Users
+
+| User Type | Description |
+|-----------|-------------|
+| **Borrower** | Complete loan applications, calculate payments, connect with the FAHM team, upload documents, and track progress. |
+| **Loan Officer (TPO)** | Manage pipelines and communicate with brokers, borrowers, and partners. |
+| **Loan Officer (Retail)** | Oversee direct borrower applications and manage milestones. |
+| **Broker (TPO)** | Submit loans and track progress via POS integration. |
+| **Retail Branch Manager (BM)** | View branch-level performance, loan metrics, and dashboards. |
+| **Realtor / Referral Partner** | Access co-branded borrower updates, receive alerts, and share mobile access. |
+| **Admin / Executive** | Monitor performance, manage user access, and ensure compliance. |
+
+**BM Definition:** Business Manager (Branch or Regional Manager) — responsible for team oversight, production, and performance reporting.
+
+---
+
+## 4. Functional Requirements
+
+### 4.1 Encompass Integration (Status / Contacts / Milestones) – BigPOS to handle
+
+**Description:**  
+Real-time sync with Encompass via API to display borrower status, loan milestones, and assigned contacts.
+
+**Requirements:**
+- Integrate via Encompass Partner Connect API or REST endpoints.
+- Display milestone tracker (e.g., Application → Processing → Underwriting → Closing).
+- Show assigned contacts (Loan Officer, Processor, Underwriter, Closer).
+- Bidirectional Auto-sync every 15 minutes or on data change triggers.
+- Allow secure in-app messaging between borrowers and FAHM contacts.
+- Borrower looks at details of their loan
+- Updating documents into Encompass specifically
+- Make sure we add chats lower down
+- Notifications
+
+---
+
+### 4.2 Total Expert CRM Integration
+
+**Description:**  
+Leverage Total Expert for marketing journeys, personalized borrower engagement, and automated alerts.
+
+**Requirements:**
+- Two-way sync of borrower and partner data between app and CRM.
+- Trigger marketing journeys when milestones are updated or new leads apply.
+- Display CRM engagement status within LO dashboards.
+- Log all in-app communications and push notifications into CRM activity history.
+- Access contacts that are stored in the CRM
+- Kick off CRM journeys from the mobile app which will result in push notifications
+
+---
+
+### 4.3 POS Integration (Blend / Big POS)
+
+**Description:**  
+Seamless borrower experience for application, upload, and approval workflows.
+
+**Requirements:**
+- Secure SSO handoff to POS via OAuth 2.0.
+- Integrate with Blend SDK or API (and "Big POS" when finalized).
+- Real-time borrower data sync and upload confirmation.
+- Trigger CRM and Encompass updates upon borrower completion.
+- Maintain consistent FAHM branding across POS and app.
+- Kick off application (link to the POS) from the mobile app. Users submits application via the POS system.
+
+---
+
+### 4.4 Xactus (Credit Reporting) Integration
+
+**Description:**  
+Credit pull and report integration for underwriting and preapproval.
+
+**Requirements:**
+- Request tri-merge credit reports from Xactus via API.
+- Retrieve and display credit score and tradeline summary.
+- Store encrypted data in Azure SQL.
+- Notify LO when new credit data is available.
+- Delete data automatically per FCRA retention policy.
+
+---
+
+### 4.5 Optimal Blue Integration
+
+**Description:**  
+Real-time rate and pricing visibility for borrowers and LOs.
+
+**Requirements:**
+- Retrieve daily rates and product pricing from Optimal Blue (via web or API).
+- Display rates dynamically in mortgage calculator and rate alert modules.
+- Store rate snapshots for compliance history.
+- Notify users of rate changes using custom triggers.
+
+---
+
+### 4.6 Performance Dashboard
+
+**Description:**  
+Data visualization for production metrics and conversion insights.
+
+**Requirements:**
+- Integrate Power BI Embedded for analytics visualization.
+- Display KPIs: applications, preapprovals, funding rates, cycle times.
+- Support branch- and regional-level aggregation for BMs.
+- Filter by user, date, and product type.
+- Lead and active pipeline, originators would see their own loan volume, loan types, etc.
+
+---
+
+### 4.7 Mortgage Calculator
+
+**Description:**  
+Simple, intuitive tool for borrowers and LOs.
+
+**Requirements:**
+- Inputs: loan amount, rate, term, taxes, insurance, HOA.
+- Output: monthly payment, amortization, APR.
+- Use Optimal Blue rate data for accurate pricing.
+- Enable "Apply Now" CTA linked to POS integration.
+
+---
+
+### 4.8 Digital Business Card
+
+**Description:**  
+Custom, co-branded LO or BM profile page.
+
+**Requirements:**
+- Auto-generate from FAHM directory data.
+- Include NMLS, photo, contact, and branch info.
+- QR code generation for referral sharing.
+- "Apply Now" button linking to co-branded POS landing page.
+
+---
+
+### 4.9 Document Upload to POS
+
+**Description:**  
+Borrowers securely upload loan documents directly to POS.
+
+**Requirements:**
+- Integrate with Blend or Encompass Consumer Connect upload API.
+- Accept PDF, PNG, JPG formats.
+- Validate file type and completion status.
+- Use Azure Blob for temporary holding, then push to POS endpoint.
+- Notify assigned LO / processor.
+
+---
+
+### 4.10 Preapproval Letter Generation
+
+**Description:**  
+Instant preapproval letter generation from approved Encompass data.
+
+**Requirements:**
+- Merge borrower and program data from Encompass.
+- Generate branded, signed PDF.
+- Support co-branding for referral partners.
+- Allow sharing via email, SMS, or in-app download.
+
+---
+
+### 4.11 Multi-Party Access (Borrower / Realtor / LO / TPO / BM)
+
+**Requirements:**
+- Role-based authentication (Azure AD B2C).
+- Custom views by persona (borrower, LO, realtor, BM).
+- Secure consent-based data sharing for referral partners.
+
+---
+
+### 4.12 Co-Branding with Referral Sources
+
+**Description:**  
+Enable referral partner visibility and marketing alignment.
+
+**Requirements:**
+- Display partner logo and info in borrower's app view.
+- Co-brand preapproval letters, digital cards, and marketing emails.
+- Track referral source analytics in dashboards.
+
+---
+
+### 4.13 POS Link (Seamless Integration)
+
+**Requirements:**
+- Direct navigation to POS from app.
+- Pass borrower tokens securely.
+- Maintain unified styling and analytics tracking.
+
+---
+
+### 4.14 Encompass Texting
+
+**Requirements:**
+- Use Twilio SMS API integrated with Encompass automation.
+- Enable 2-way communication inside app.
+- Auto-log all messages for compliance.
+- Automated status notifications.
+
+---
+
+### 4.15 Rate Alerts
+
+**Requirements:**
+- Pull live rate data from Optimal Blue.
+- Allow custom triggers and borrower subscriptions.
+- Send via push or SMS.
+- Log alerts in Total Expert CRM.
+
+---
+
+### 4.16 Chatbot (AI Assistant)
+
+**Requirements:**
+- Built using Azure OpenAI or Copilot Studio.
+- Provide FAQ, status lookup, and program guidance.
+- Pull live data from Encompass, CRM, and POS APIs.
+- Escalate to human via Teams or in-app chat.
+
+---
+
+### 4.17 GLBA and Regulatory Compliance
+
+**Requirements:**
+- Encrypt all data (AES-256, TLS 1.2+).
+- MFA for all authenticated users.
+- Implement least-privilege access.
+- Annual compliance and penetration testing.
+- Consent management for all data sharing.
+
+---
+
+## 5. Non-Functional Requirements
+
+| Category | Description |
+|----------|-------------|
+| **Security** | Azure AD B2C, MFA, encryption, compliance logging. |
+| **Scalability** | Azure App Service with autoscaling. |
+| **Performance** | <2s API latency, 99.9% uptime. |
+| **Compatibility** | iOS and Android (React Native). |
+| **Localization** | English, Spanish (Phase 2). |
+| **Compliance** | GLBA, CCPA, CFPB, SOC 2 Type II. |
+
+---
+
+## 6. Technical Architecture
+
+### Stack Overview
+
+- **Frontend:** React Native (Expo)
+- **Backend:** Node.js + Express
+- **Database:** Azure SQL + Azure Blob Storage
+- **AI:** Azure OpenAI + Azure Cognitive Search
+- **Authentication:** Azure AD B2C (RBAC)
+- **Integrations:**
+  - Encompass Partner Connect API
+  - Total Expert CRM API
+  - POS (Blend / Big POS TBD)
+  - Xactus Credit API
+  - Optimal Blue (API or Web Scrape)
+  - Twilio Voice + SMS
+- **Reporting:** Power BI Embedded
+- **Hosting:** Azure App Service + CDN
+
+---
+
+## 7. Deliverables & Timelines
+
+| Phase | Deliverable | Target Completion |
+|-------|-------------|-------------------|
+| **Phase 1** | MVP: Borrower portal, calculator, preapproval, POS upload | 90 days |
+| **Phase 2** | CRM, Xactus, and Optimal Blue integrations + AI chatbot | 180 days |
+| **Phase 3** | Co-branding, dashboards, and compliance audit | 270 days |
+
+---
+
+## 8. Future Enhancements
+
+- Add eSign and Closing Disclosure review within the app.
+- Integrate Microsoft 365 Copilot for internal automation.
+- Extend Power BI dashboards for executives.
+- Add video call and multilingual support (Spanish, Mandarin).
+- Explore Open Banking integration for income and asset verification.
+
+---
+
+## Loan Officer (Retail) Experience
+
+### Purpose
+
+The Loan Officer (Retail) module will provide a fully mobile, end-to-end workspace that enables Loan Officers to manage their borrower pipeline, process applications, and move loans from pre-approval to closing — all from the palm of their hand. This feature set eliminates the need to depend on slow or disconnected desktop systems when working remotely, ensuring a seamless, real-time experience even in low-bandwidth environments.
+
+### Core Functional Requirements
+
+#### Pipeline and Borrower Management
+- Manage retail borrower pipelines and monitor milestone progress in real time.
+- Access borrower applications, credit reports, and uploaded documents directly within the app.
+- Review and approve documents submitted by borrowers or Third-Party Originators (TPOs).
+
+#### Credit and Pre-Approval Processing
+- Pull credit reports directly from the loan application.
+- Process new pre-approvals, modify existing ones, and issue updated versions as needed.
+- Email or share pre-approval letters securely with borrowers and referral partners.
+
+#### Loan Pricing and Guideline Access
+- Integrate with Optimal Blue for real-time loan pricing, product eligibility, and guideline retrieval.
+- Price out loans, lock and extend rates, and manage change-of-circumstance requests within the same workflow.
+
+#### Disclosure and Document Management
+- Send, retrieve, and review loan disclosures and supporting documents from within the app.
+- Track borrower acknowledgment and submission status.
+- Push files through processing milestones, request conditions, and monitor status through final settlement.
+
+#### Mobile and Offline Optimization
+- Ensure reliable performance when operating in low-connectivity environments (e.g., while traveling).
+- Enable asynchronous updates and caching so Loan Officers can continue working even without strong Wi-Fi.
+- Provide a responsive, simplified interface optimized for mobile devices.
+
+### User Pain Point (Current State)
+
+Loan Officers, such as Andrew, often face frustration when working remotely due to slow connectivity impacting Encompass, CRM, and email systems. The goal is to eliminate these bottlenecks by delivering the full loan origination process — from Point of Sale (POS) to settlement — in one unified mobile app.
+
+### End-to-End Workflow (Target State)
+
+- Complete or assist with borrower Point of Sale (POS) applications.
+- Retrieve borrower and property information.
+- Issue, email, and modify pre-approvals.
+- Disclose and submit loan files.
+- Request and review conditions as the file moves through processing.
+- Track milestones and monitor progress through closing.
+- Price, lock, and extend loans directly through Optimal Blue.
+
+### AI-Enhanced Features
+
+#### Conversational AI Assistant
+
+Loan Officers can ask natural-language questions such as:
+- "What's my mortgage payment for $300K with 20% down?"
+- "What's the minimum FICO for FHA?"
+
+The AI should respond instantly with the correct calculation or guideline reference.
+
+Voice input ('speak to the app') should be supported.
+
+#### Scenario Simulation & Guideline Lookup
+
+- Retrieve guideline information, pricing scenarios, or investor overlays on demand.
+- AI should recommend possible product matches or eligibility adjustments.
+
+#### Embedded Mortgage Tools
+
+Mortgage calculator, program comparison tool, and voice-driven scenario assistant.
+
+### Future Vision: Multimedia AI (Optional Roadmap)
+
+Integration with emerging AI technologies (e.g., Sora-like video generation) to produce dynamic content for borrower education, marketing, or training — activated through simple voice prompts.
+
+### Vision Summary
+
+The FAHM Mobile App will serve as a single, intelligent workspace for Retail Loan Officers — enabling them to originate, price, disclose, and close loans efficiently, from anywhere, with AI assistance and seamless system integration.

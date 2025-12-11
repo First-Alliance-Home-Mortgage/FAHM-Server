@@ -18,7 +18,10 @@
     { "key": "officerId", "value": "" },
     { "key": "documentId", "value": "" },
     { "key": "notificationId", "value": "" },
-    { "key": "userId", "value": "" }
+    { "key": "userId", "value": "" },
+    { "key": "messageId", "value": "" },
+    { "key": "contactId", "value": "" },
+    { "key": "journeyId", "value": "" }
   ],
   "item": [
     {
@@ -134,6 +137,150 @@
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
       "item": [
         { "name": "Me", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } }
+      ]
+    },
+    {
+      "name": "Encompass Integration",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        { 
+          "name": "Sync Loan", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync" 
+          } 
+        },
+        { 
+          "name": "Get Loan Contacts", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/contacts" 
+          } 
+        },
+        { 
+          "name": "Get Loan Messages", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages" 
+          } 
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": \"{{userId}}\",\n  \"messageType\": \"text\",\n  \"content\": \"Hi, I have a question about my loan application.\"\n}"
+            }
+          }
+        },
+        { 
+          "name": "Mark Message Read", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages/{{messageId}}/read" 
+          } 
+        },
+        { 
+          "name": "Get Sync History", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync-history" 
+          } 
+        }
+      ]
+    },
+    {
+      "name": "CRM Integration",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        { 
+          "name": "Sync Contacts", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/crm/sync/contacts" 
+          } 
+        },
+        { 
+          "name": "Get CRM Contacts", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/crm/contacts" 
+          } 
+        },
+        { 
+          "name": "Get Contact Engagement", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/crm/contacts/{{contactId}}/engagement" 
+          } 
+        },
+        { 
+          "name": "Sync Journeys", 
+          "request": { 
+            "method": "POST", 
+            "url": "{{baseUrl}}/crm/sync/journeys" 
+          } 
+        },
+        { 
+          "name": "Get Journeys", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/crm/journeys" 
+          } 
+        },
+        {
+          "name": "Enroll in Journey",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/crm/contacts/{{contactId}}/journeys/{{journeyId}}/enroll",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metadata\": {\n    \"source\": \"mobile_app\",\n    \"campaign\": \"spring_2024\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Trigger Milestone Journey",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/crm/loans/{{loanId}}/trigger-milestone-journey",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"milestone\": \"underwriting_approved\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Log Activity",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/crm/contacts/{{contactId}}/activities",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityType\": \"email\",\n  \"direction\": \"outbound\",\n  \"subject\": \"Pre-approval letter sent\",\n  \"content\": \"Sent pre-approval letter for $350,000\",\n  \"metadata\": {\n    \"loanAmount\": 350000,\n    \"propertyAddress\": \"123 Main St\"\n  }\n}"
+            }
+          }
+        },
+        { 
+          "name": "Get Activity History", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/crm/contacts/{{contactId}}/activities?limit=50&skip=0" 
+          } 
+        },
+        { 
+          "name": "Get Sync Logs", 
+          "request": { 
+            "method": "GET", 
+            "url": "{{baseUrl}}/crm/sync/logs?limit=50" 
+          } 
+        }
       ]
     }
   ]

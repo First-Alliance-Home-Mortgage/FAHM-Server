@@ -34,6 +34,8 @@ const options = {
       { name: 'Notifications', description: 'User notification system' },
       { name: 'Calculator', description: 'Mortgage payment calculator' },
       { name: 'POS Integration', description: 'Point of Sale system integration' },
+      { name: 'Encompass Integration', description: 'Encompass LOS real-time sync (status, contacts, milestones, messaging)' },
+      { name: 'CRM Integration', description: 'Total Expert CRM integration for marketing journeys and engagement' },
     ],
     components: {
       securitySchemes: {

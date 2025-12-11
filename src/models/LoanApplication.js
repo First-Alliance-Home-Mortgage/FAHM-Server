@@ -22,6 +22,10 @@ const loanApplicationSchema = new mongoose.Schema(
     },
     milestones: [milestoneSchema],
     source: { type: String, enum: ['retail', 'tpo'], default: 'retail' },
+    // Encompass integration fields
+    encompassLoanId: { type: String, unique: true, sparse: true },
+    lastEncompassSync: { type: Date },
+    encompassData: { type: Object }, // Store additional Encompass-specific data
   },
   { timestamps: true }
 );
