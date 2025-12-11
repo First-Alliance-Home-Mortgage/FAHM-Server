@@ -1,10 +1,11 @@
 {
   "info": {
     "name": "FAHM API",
+    "description": "FAHM Server REST API - Node.js/Express backend for loan application management",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "rootUrl", "value": "http://localhost:3000" },
+    { "key": "rootUrl", "value": "http://localhost:4000" },
     { "key": "baseUrl", "value": "{{rootUrl}}/api/v1" },
     { "key": "authToken", "value": "" },
     { "key": "name", "value": "Jane Doe" },
@@ -69,7 +70,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 250000,\n  \"borrower\": \"{{borrowerId}}\",\n  \"assignedOfficer\": \"{{officerId}}\",\n  \"status\": \"pending\"\n}"
+              "raw": "{\n  \"amount\": 250000,\n  \"borrower\": \"{{borrowerId}}\",\n  \"assignedOfficer\": \"{{officerId}}\",\n  \"propertyAddress\": \"123 Main St, City, ST 12345\",\n  \"status\": \"application\",\n  \"source\": \"retail\",\n  \"milestones\": [\n    { \"name\": \"Application Submitted\", \"status\": \"completed\" },\n    { \"name\": \"Documentation Review\", \"status\": \"in_progress\" },\n    { \"name\": \"Underwriting\", \"status\": \"pending\" }\n  ]\n}"
             }
           }
         },
@@ -80,7 +81,10 @@
             "method": "PATCH",
             "url": "{{baseUrl}}/loans/{{loanId}}/status",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\"\n}" }
+            "body": { 
+              "mode": "raw", 
+              "raw": "{\n  \"status\": \"underwriting\",\n  \"milestones\": [\n    { \"name\": \"Application Submitted\", \"status\": \"completed\" },\n    { \"name\": \"Documentation Review\", \"status\": \"completed\" },\n    { \"name\": \"Underwriting\", \"status\": \"in_progress\" },\n    { \"name\": \"Final Approval\", \"status\": \"pending\" }\n  ]\n}" 
+            }
           }
         }
       ]
@@ -98,7 +102,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"loan\": \"{{loanId}}\",\n  \"name\": \"W2\",\n  \"type\": \"pdf\",\n  \"url\": \"https://example.com/w2.pdf\"\n}"
+              "raw": "{\n  \"loan\": \"{{loanId}}\",\n  \"name\": \"W2_2024.pdf\",\n  \"type\": \"pdf\",\n  \"size\": 245760,\n  \"hash\": \"sha256:abc123def456\",\n  \"url\": \"https://storage.example.com/docs/w2_2024.pdf\"\n}"
             }
           }
         },
@@ -118,7 +122,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"New Document\",\n  \"user\": \"{{userId}}\",\n  \"type\": \"info\"\n}"
+              "raw": "{\n  \"title\": \"New Document Required\",\n  \"message\": \"Please upload your recent pay stubs\",\n  \"user\": \"{{userId}}\",\n  \"type\": \"document_request\",\n  \"forceSend\": false\n}"
             }
           }
         },

@@ -25,6 +25,14 @@ npm install
 npm run dev
 ```
 
+## API Documentation
+
+**Interactive Swagger UI:** [http://localhost:4000/api-docs](http://localhost:4000/api-docs)  
+**OpenAPI Spec (JSON):** [http://localhost:4000/api-docs.json](http://localhost:4000/api-docs.json)  
+**Markdown Documentation:** See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+
+The Swagger UI provides an interactive interface to explore and test all API endpoints. You can authenticate using the "Authorize" button with your JWT token.
+
 ## Key Endpoints (v1)
 - `POST /api/v1/auth/register` – register user (borrower/LO/etc.)
 - `POST /api/v1/auth/login` – login, returns JWT
