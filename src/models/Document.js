@@ -17,5 +17,17 @@ const documentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for common document lookups and cleanup of temp blobs
+documentSchema.index({ loan: 1, createdAt: -1 });
+documentSchema.index({ uploadedBy: 1, createdAt: -1 });
+documentSchema.index({ status: 1, createdAt: -1 });
+documentSchema.index(
+  { tempBlobExpiresAt: 1 },
+  {
+    expireAfterSeconds: 0,
+    partialFilterExpression: { tempBlobExpiresAt: { $exists: true } }
+  }
+);
+
 module.exports = mongoose.model('Document', documentSchema);
 

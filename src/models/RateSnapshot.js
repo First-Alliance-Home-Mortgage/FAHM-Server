@@ -62,8 +62,7 @@ const rateSnapshotSchema = new mongoose.Schema(
       index: true
     },
     expiresAt: {
-      type: Date,
-      index: true
+      type: Date
     },
     metadata: mongoose.Schema.Types.Mixed
   },

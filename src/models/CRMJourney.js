@@ -52,4 +52,8 @@ const crmJourneySchema = new mongoose.Schema(
   }
 );
 
+// Indexes for journey status and sync monitoring
+crmJourneySchema.index({ status: 1, triggerType: 1 });
+crmJourneySchema.index({ lastSyncedAt: -1 });
+
 module.exports = mongoose.model('CRMJourney', crmJourneySchema);

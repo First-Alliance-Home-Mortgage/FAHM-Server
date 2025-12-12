@@ -87,8 +87,7 @@ const rateAlertSchema = new mongoose.Schema(
       type: Date,
       default: function() {
         return new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
-      },
-      index: true
+      }
     },
     
     // Trigger history

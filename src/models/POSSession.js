@@ -93,8 +93,7 @@ const posSessionSchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    required: true,
-    index: true
+    required: true
   },
   activatedAt: Date,
   completedAt: Date,
@@ -193,7 +192,8 @@ const posSessionSchema = new mongoose.Schema({
     userAgent: String
   }]
 }, {
-  timestamps: true
+  timestamps: true,
+  suppressReservedKeysWarning: true
 });
 
 // Indexes for performance

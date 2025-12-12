@@ -87,5 +87,6 @@ module.exports = {
   upload,
   handleMulterError,
   ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE
+  MAX_FILE_SIZE,
+  fileFilter,
 };

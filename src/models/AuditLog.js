@@ -14,5 +14,10 @@ const auditLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes to speed up audit trails by user, entity, and action
+auditLogSchema.index({ user: 1, createdAt: -1 });
+auditLogSchema.index({ entityType: 1, entityId: 1 });
+auditLogSchema.index({ action: 1, status: 1, createdAt: -1 });
+
 module.exports = mongoose.model('AuditLog', auditLogSchema);
 

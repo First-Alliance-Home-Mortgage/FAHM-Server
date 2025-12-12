@@ -36,5 +36,12 @@ const loanApplicationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Query indexes to speed up borrower/officer/referral lookups
+loanApplicationSchema.index({ borrower: 1, status: 1 });
+loanApplicationSchema.index({ assignedOfficer: 1, status: 1 });
+loanApplicationSchema.index({ referralSource: 1, status: 1 });
+loanApplicationSchema.index({ posSystem: 1, posApplicationId: 1 });
+loanApplicationSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('LoanApplication', loanApplicationSchema);
 

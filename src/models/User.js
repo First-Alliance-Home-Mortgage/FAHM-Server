@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes to support role-based filters and active user lookups
+userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ emailVerified: 1, isActive: 1 });
+
 userSchema.pre('save', async function preSave(next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
