@@ -11,6 +11,7 @@ const totalExpertService = require('../services/totalExpertService');
 const LoanApplication = require('../models/LoanApplication');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const { assertSafeUrl } = require('../utils/ssrf');
 
 // simple in-memory rate limit for token mints per user per minute
 const mintWindow = new Map();
@@ -75,6 +76,10 @@ exports.initiateApplication = async (req, res, next) => {
     }
 
     const { loanId, posSystem, returnUrl, logoUrl, primaryColor, secondaryColor } = req.body;
+
+    // SSRF guard on optional callback assets
+    if (returnUrl) assertSafeUrl(returnUrl);
+    if (logoUrl) assertSafeUrl(logoUrl);
 
     // Get loan application
     const loan = await LoanApplication.findById(loanId)
@@ -300,7 +305,7 @@ exports.handleBlendWebhook = async (req, res, next) => {
     const event = req.body;
 
     // Verify webhook signature
-    if (!blendPOSService.verifyWebhookSignature(event, signature)) {
+    if (!signature || !blendPOSService.verifyWebhookSignature(event, signature)) {
       return next(createError(401, 'Invalid webhook signature'));
     }
 
@@ -359,7 +364,7 @@ exports.handleBigPOSWebhook = async (req, res, next) => {
     const event = req.body;
 
     // Verify webhook signature
-    if (!bigPOSService.verifyWebhookSignature(event, signature)) {
+    if (!signature || !bigPOSService.verifyWebhookSignature(event, signature)) {
       return next(createError(401, 'Invalid webhook signature'));
     }
 

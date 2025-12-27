@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const roles = require('../config/roles');
 const authController = require('../controllers/authController');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -13,7 +14,8 @@ const passwordValidator = body('password').isLength({ min: 6 }).withMessage('Pas
  *   post:
  *     summary: Register a new user
  *     tags: [Authentication]
- *     security: []
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -54,6 +56,9 @@ const passwordValidator = body('password').isLength({ min: 6 }).withMessage('Pas
  *                 token:
  *                   type: string
  *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 refreshToken:
+ *                   type: string
+ *                   example: 6c2d2f26e6e84c1bb0fdfee0e3f4d9b3f1d5c8fa2d1b242e30
  *                 user:
  *                   type: object
  *                   properties:
@@ -128,6 +133,9 @@ router.post(
  *                 token:
  *                   type: string
  *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 refreshToken:
+ *                   type: string
+ *                   example: 6c2d2f26e6e84c1bb0fdfee0e3f4d9b3f1d5c8fa2d1b242e30
  *                 user:
  *                   type: object
  *                   properties:
@@ -150,6 +158,75 @@ router.post(
   '/login',
   [body('email').isEmail(), passwordValidator.withMessage('Password required')],
   authController.login
+);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Exchange refresh token for a new access token
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New access token issued
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       401:
+ *         description: Invalid refresh token
+ */
+router.post(
+  '/refresh',
+  [body('refreshToken').isString().withMessage('Refresh token required')],
+  authController.refresh
+);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout current user session
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Specific refresh token to revoke
+ *     responses:
+ *       204:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  '/logout',
+  authenticate,
+  [body('refreshToken').optional().isString()],
+  authController.logout
 );
 
 module.exports = router;

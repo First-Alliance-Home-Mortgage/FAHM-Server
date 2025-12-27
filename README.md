@@ -15,7 +15,7 @@ Backend scaffold for the FAHM mobile app. Provides a REST-only API with a clean 
 - `src/utils` – helpers (logger, async handler)
 
 ## Setup
-1) Copy `.env.example` to `.env` and fill values (Mongo URI, JWT secret, etc.).
+1) Copy `.env.example` to `.env` and fill values (Mongo URI, JWT secret, etc.). You can override refresh token lifetime via `REFRESH_TOKEN_EXPIRATION_DAYS` (defaults to 30).
 2) Install deps:
 ```bash
 npm install
@@ -36,6 +36,8 @@ The Swagger UI provides an interactive interface to explore and test all API end
 ## Key Endpoints (v1)
 - `POST /api/v1/auth/register` – register user (borrower/LO/etc.)
 - `POST /api/v1/auth/login` – login, returns JWT
+- `POST /api/v1/auth/refresh` – exchange refresh token for new JWT
+- `POST /api/v1/auth/logout` – revoke refresh token / end session
 - `GET /api/v1/users/me` – current user profile
 - `GET /api/v1/loans` – list loans (borrowers see their own)
 - `POST /api/v1/loans` – create loan (role-protected)

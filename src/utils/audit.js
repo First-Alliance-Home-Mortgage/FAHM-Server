@@ -1,4 +1,6 @@
+const { dbEngine } = require('../config/env');
 const AuditLog = require('../models/AuditLog');
+const { auditLogRepository } = require('../repositories');
 
 /**
  * Persist an audit log entry.
@@ -20,11 +22,34 @@ async function audit(params, req) {
       metadata: params.metadata,
     };
     if (req) {
-      entry.user = req.user?._id;
+      entry.user = req.user?._id || req.user?.id;
       entry.ip = req.ip;
       entry.userAgent = req.headers['user-agent'];
     }
-    await AuditLog.create(entry);
+
+    if (dbEngine === 'mssql') {
+      await auditLogRepository.insert({
+        userId: entry.user,
+        action: entry.action,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        status: entry.status,
+        ip: entry.ip,
+        userAgent: entry.userAgent,
+        metadata: entry.metadata,
+      });
+    } else {
+      await AuditLog.create({
+        user: entry.user,
+        action: entry.action,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        status: entry.status,
+        ip: entry.ip,
+        userAgent: entry.userAgent,
+        metadata: entry.metadata,
+      });
+    }
   } catch (err) {
     // Avoid throwing in audit path; log to console as a fallback.
     // In production, wire to real logger/metrics.

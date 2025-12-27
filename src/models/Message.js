@@ -21,5 +21,7 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ loan: 1, createdAt: -1 });
 messageSchema.index({ recipient: 1, read: 1 });
+messageSchema.index({ sender: 1, createdAt: -1 });
+messageSchema.index({ loan: 1, read: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Message', messageSchema);

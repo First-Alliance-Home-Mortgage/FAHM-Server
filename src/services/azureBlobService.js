@@ -1,10 +1,16 @@
-const { BlobServiceClient } = require('@azure/storage-blob');
+const {
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+  BlobSASPermissions,
+  generateBlobSASQueryParameters,
+} = require('@azure/storage-blob');
 const logger = require('../utils/logger');
 
 class AzureBlobService {
   constructor() {
     this.connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
     this.containerName = process.env.AZURE_BLOB_CONTAINER || 'loan-documents';
+    this.sharedKeyCredential = this.buildSharedKeyCredential(this.connectionString);
     
     if (!this.connectionString) {
       logger.warn('AZURE_STORAGE_CONNECTION_STRING not set - Azure Blob uploads will fail');
@@ -12,6 +18,21 @@ class AzureBlobService {
     } else {
       this.blobServiceClient = BlobServiceClient.fromConnectionString(this.connectionString);
     }
+  }
+
+  buildSharedKeyCredential(connectionString) {
+    if (!connectionString) return null;
+    const accountName = this.getConnectionValue(connectionString, 'AccountName');
+    const accountKey = this.getConnectionValue(connectionString, 'AccountKey');
+    if (!accountName || !accountKey) return null;
+    this.accountName = accountName;
+    this.accountKey = accountKey;
+    return new StorageSharedKeyCredential(accountName, accountKey);
+  }
+
+  getConnectionValue(connectionString, key) {
+    const match = connectionString.match(new RegExp(`${key}=([^;]+)`));
+    return match ? match[1] : null;
   }
 
   /**
@@ -23,12 +44,7 @@ class AzureBlobService {
         throw new Error('Azure Blob Storage not configured');
       }
 
-      const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
-      
-      // Create container if it doesn't exist
-      await containerClient.createIfNotExists({
-        access: 'private'
-      });
+      const containerClient = await this.ensureContainer();
 
       const blockBlobClient = containerClient.getBlockBlobClient(fileName);
 
@@ -69,7 +85,7 @@ class AzureBlobService {
         throw new Error('Azure Blob Storage not configured');
       }
 
-      const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+      const containerClient = await this.ensureContainer();
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       const downloadResponse = await blockBlobClient.download();
@@ -96,7 +112,7 @@ class AzureBlobService {
         throw new Error('Azure Blob Storage not configured');
       }
 
-      const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+      const containerClient = await this.ensureContainer();
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       await blockBlobClient.delete();
@@ -115,25 +131,38 @@ class AzureBlobService {
   /**
    * Generate SAS URL for temporary access
    */
-  async generateSasUrl(blobName, expiryMinutes = 60) {
+  async generateSasUrl(blobName, expiryMinutes = 60, permissions = 'cw') {
     try {
       if (!this.blobServiceClient) {
         throw new Error('Azure Blob Storage not configured');
       }
 
-      const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+      if (!this.sharedKeyCredential) {
+        throw new Error('Azure Blob Storage shared key not configured for SAS generation');
+      }
+
+      const containerClient = await this.ensureContainer();
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       const expiresOn = new Date();
       expiresOn.setMinutes(expiresOn.getMinutes() + expiryMinutes);
 
-      // Note: For SAS token generation, you need SharedKeyCredential
-      // This is a simplified version - in production, implement proper SAS generation
-      const sasUrl = blockBlobClient.url;
+      const sasToken = generateBlobSASQueryParameters(
+        {
+          containerName: this.containerName,
+          blobName,
+          permissions: BlobSASPermissions.parse(permissions),
+          expiresOn,
+        },
+        this.sharedKeyCredential
+      ).toString();
+
+      const sasUrl = `${blockBlobClient.url}?${sasToken}`;
 
       logger.info('SAS URL generated', {
         blobName,
-        expiresOn
+        expiresOn,
+        permissions,
       });
 
       return sasUrl;
@@ -167,8 +196,7 @@ class AzureBlobService {
       if (!this.blobServiceClient) {
         return false;
       }
-
-      const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+      const containerClient = await this.ensureContainer();
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       return await blockBlobClient.exists();
@@ -176,6 +204,12 @@ class AzureBlobService {
       logger.error('Error checking blob existence:', error);
       return false;
     }
+  }
+
+  async ensureContainer() {
+    const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+    await containerClient.createIfNotExists({ access: 'private' });
+    return containerClient;
   }
 }
 

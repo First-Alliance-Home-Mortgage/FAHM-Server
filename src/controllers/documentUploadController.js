@@ -3,11 +3,89 @@ const { validationResult } = require('express-validator');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const DocumentUpload = require('../models/DocumentUpload');
+const Document = require('../models/Document');
 const LoanApplication = require('../models/LoanApplication');
 const Notification = require('../models/Notification');
 const azureBlobService = require('../services/azureBlobService');
 const posUploadService = require('../services/posUploadService');
 const logger = require('../utils/logger');
+const { storage } = require('../config/env');
+
+const ALLOWED_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+
+/**
+ * Create a presigned URL for direct-to-blob uploads
+ * POST /api/v1/documents/presign
+ */
+exports.createPresignedUpload = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(createError(400, { errors: errors.array() }));
+    }
+
+    const { loanId, documentType, fileName, mimeType, fileSize } = req.body;
+    const uploadedBy = req.user._id;
+
+    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+      return next(createError(400, 'Unsupported file type'));
+    }
+
+    if (fileSize && Number(fileSize) > 10 * 1024 * 1024) {
+      return next(createError(400, 'File exceeds 10MB limit'));
+    }
+
+    const loan = await LoanApplication.findById(loanId);
+    if (!loan) {
+      return next(createError(404, 'Loan not found'));
+    }
+
+    const isBorrower = loan.borrower.toString() === uploadedBy.toString();
+    const isOfficer = loan.assignedOfficer?.toString() === uploadedBy.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isBorrower && !isOfficer && !isAdmin) {
+      return next(createError(403, 'You do not have permission to upload documents for this loan'));
+    }
+
+    const ext = path.extname(fileName || '').toLowerCase();
+    const uniqueFileName = `${loanId}/${documentType}/${uuidv4()}${ext || ''}`;
+    const expiresMinutes = storage?.presignExpiryMinutes || 30;
+
+    const sasUrl = await azureBlobService.generateSasUrl(uniqueFileName, expiresMinutes, 'cw');
+    const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+
+    const document = await Document.create({
+      loan: loanId,
+      uploadedBy,
+      name: fileName || uniqueFileName,
+      type: mimeType?.includes('png') ? 'png' : mimeType?.includes('jpeg') || mimeType?.includes('jpg') ? 'jpg' : 'pdf',
+      size: fileSize,
+      url: sasUrl,
+      status: 'pending',
+      tempBlobExpiresAt: expiresAt,
+    });
+
+    logger.info('Generated presigned upload URL', {
+      userId: uploadedBy,
+      loanId,
+      documentId: document._id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        uploadUrl: sasUrl,
+        blobName: uniqueFileName,
+        expiresAt,
+        documentId: document._id,
+      },
+    });
+  } catch (error) {
+    logger.error('Error generating presigned upload URL', { error: error.message });
+    return next(error);
+  }
+};
 
 /**
  * Upload document to loan
@@ -263,6 +341,10 @@ exports.getDocument = async (req, res, next) => {
 
     if (!document) {
       return next(createError(404, 'Document not found'));
+    }
+
+    if (document.status === 'deleted' || document.status === 'failed') {
+      return next(createError(403, 'Document not available for download'));
     }
 
     // Check access rights

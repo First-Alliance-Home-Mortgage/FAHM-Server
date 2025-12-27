@@ -41,7 +41,7 @@ describe('middleware/auth.authenticate', () => {
   });
 
   it('attaches user on success', async () => {
-    const user = { _id: 'u1', role: 'borrower' };
+    const user = { _id: 'u1', role: 'borrower', isActive: true };
     const req = { headers: { authorization: 'Bearer good' } };
     const res = makeRes();
     const next = makeNext();
@@ -67,6 +67,21 @@ describe('middleware/auth.authenticate', () => {
     const err = next.mock.calls[0][0];
     expect(err.status).toBe(401);
     expect(err.message).toBe('User not found');
+  });
+
+  it('rejects inactive users', async () => {
+    const user = { _id: 'u1', role: 'borrower', isActive: false };
+    const req = { headers: { authorization: 'Bearer good' } };
+    const res = makeRes();
+    const next = makeNext();
+    jwt.verify.mockReturnValue({ sub: 'u1' });
+    User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(user) });
+
+    await authenticate(req, res, next);
+
+    const err = next.mock.calls[0][0];
+    expect(err.status).toBe(403);
+    expect(err.message).toBe('User is inactive');
   });
 });
 
@@ -102,6 +117,28 @@ describe('middleware/auth.authorize', () => {
     authorize('admin')(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
+  });
+
+  it('passes when capability allowed', () => {
+    const req = { user: { role: 'borrower' } };
+    const res = makeRes();
+    const next = makeNext();
+
+    authorize({ capabilities: ['loan:read:self'] })(req, res, next);
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it('rejects when capability missing', () => {
+    const req = { user: { role: 'borrower' } };
+    const res = makeRes();
+    const next = makeNext();
+
+    authorize({ capabilities: ['rates:lock'] })(req, res, next);
+
+    const err = next.mock.calls[0][0];
+    expect(err.status).toBe(403);
+    expect(err.message).toBe('Forbidden');
   });
 });
 

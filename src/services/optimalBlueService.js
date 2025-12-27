@@ -7,6 +7,8 @@ const OPTIMAL_BLUE_CLIENT_SECRET = process.env.OPTIMAL_BLUE_CLIENT_SECRET;
 
 let cachedToken = null;
 let tokenExpiresAt = null;
+const rateSheetCache = new Map();
+const defaultRateTtlMs = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Get OAuth 2.0 access token with caching
@@ -96,6 +98,36 @@ async function getRateSheet(loanScenario = {}) {
   });
 
   return transformRateSheet(data);
+}
+
+function scenarioCacheKey(loanScenario = {}) {
+  // Keep key deterministic to maximize cache hits
+  const ordered = {
+    loanAmount: loanScenario.loanAmount,
+    productType: loanScenario.productType,
+    loanTerm: loanScenario.loanTerm,
+    loanPurpose: loanScenario.loanPurpose,
+    propertyType: loanScenario.propertyType,
+    occupancy: loanScenario.occupancy,
+    ltv: loanScenario.ltv,
+    creditScore: loanScenario.creditScore,
+  };
+  return JSON.stringify(ordered);
+}
+
+async function getRateSheetCached(loanScenario = {}, ttlMs = defaultRateTtlMs) {
+  const key = scenarioCacheKey(loanScenario);
+  const now = Date.now();
+  const cached = rateSheetCache.get(key);
+
+  if (cached && cached.expiresAt > now) {
+    logger.debug('Returning cached Optimal Blue rate sheet', { loanScenario });
+    return cached.data;
+  }
+
+  const data = await getRateSheet(loanScenario);
+  rateSheetCache.set(key, { data, expiresAt: now + ttlMs });
+  return data;
 }
 
 /**
@@ -317,6 +349,7 @@ function mapOccupancy(obOccupancy) {
 
 module.exports = {
   getRateSheet,
+  getRateSheetCached,
   getProductPricing,
   submitRateLock,
   extendRateLock,

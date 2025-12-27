@@ -3,17 +3,45 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
+const { v4: uuidv4 } = require('uuid');
 const routes = require('./routes');
 const { notFound, errorHandler } = require('./middleware/error');
 const swaggerSpec = require('./config/swagger');
+const logger = require('./utils/logger');
+const { security } = require('./config/env');
 
 const app = express();
 
+app.disable('x-powered-by');
+
 app.use(helmet());
-app.use(cors());
+const allowedOrigins = (security.corsOrigins || '*')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+const corsOptions = {
+  origin: allowedOrigins.includes('*')
+    ? '*'
+    : (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          return callback(null, origin);
+        }
+        return callback(new Error('Not allowed by CORS'));
+      },
+  credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
+
+// Request-scoped metadata for logging and tracing
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || uuidv4();
+  res.setHeader('X-Request-Id', req.id);
+  req.log = logger.child({ requestId: req.id });
+  return next();
+});
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 

@@ -329,6 +329,7 @@ router.post(
 router.post(
   '/locks',
   authenticate,
+  authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER, roles.BORROWER),
   [
     body('loanId').isMongoId(),
     body('rateSnapshotId').isMongoId(),
@@ -356,7 +357,12 @@ router.post(
  *       200:
  *         description: Rate locks retrieved successfully
  */
-router.get('/locks/loan/:loanId', authenticate, rateController.getLoanRateLocks);
+router.get(
+  '/locks/loan/:loanId',
+  authenticate,
+  authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER, roles.BORROWER),
+  rateController.getLoanRateLocks
+);
 
 /**
  * @swagger

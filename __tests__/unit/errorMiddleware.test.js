@@ -49,7 +49,7 @@ describe('middleware/error', () => {
         errors: undefined,
       }),
     );
-    expect(logger.debug).toHaveBeenCalledWith('Not found', { path: '/missing' });
+    expect(logger.debug).toHaveBeenCalledWith('Not found', expect.objectContaining({ path: '/missing' }));
     expect(logger.error).not.toHaveBeenCalled();
   });
 

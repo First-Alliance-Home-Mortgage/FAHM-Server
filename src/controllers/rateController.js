@@ -24,11 +24,12 @@ exports.getCurrentRates = async (req, res, next) => {
       propertyType,
       occupancy,
       ltv,
-      creditScore
+      creditScore,
+      refresh,
+      ttlMs,
     } = req.query;
 
-    // Fetch fresh rates from Optimal Blue
-    const ratesFromOB = await optimalBlueService.getRateSheet({
+    const scenario = {
       loanAmount: loanAmount ? parseFloat(loanAmount) : undefined,
       productType,
       loanTerm: loanTerm ? parseInt(loanTerm) : undefined,
@@ -36,8 +37,16 @@ exports.getCurrentRates = async (req, res, next) => {
       propertyType,
       occupancy,
       ltv: ltv ? parseFloat(ltv) : undefined,
-      creditScore: creditScore ? parseInt(creditScore) : undefined
-    });
+      creditScore: creditScore ? parseInt(creditScore) : undefined,
+    };
+
+    const useCache = refresh !== 'true';
+    const ttl = ttlMs ? parseInt(ttlMs, 10) : undefined;
+
+    // Fetch rates from Optimal Blue with optional caching for responsiveness
+    const ratesFromOB = useCache
+      ? await optimalBlueService.getRateSheetCached(scenario, ttl)
+      : await optimalBlueService.getRateSheet(scenario);
 
     // Save snapshots to database for compliance history
     const savedSnapshots = [];

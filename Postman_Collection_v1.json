@@ -4,10 +4,17 @@
     "description": "FAHM Server REST API - Node.js/Express backend for loan application management",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{authToken}}", "type": "string" }
+    ]
+  },
   "variable": [
     { "key": "rootUrl", "value": "http://localhost:4000" },
     { "key": "baseUrl", "value": "{{rootUrl}}/api/v1" },
     { "key": "authToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
     { "key": "name", "value": "Jane Doe" },
     { "key": "email", "value": "jane@example.com" },
     { "key": "password", "value": "secret123" },
@@ -36,6 +43,7 @@
   "item": [
     {
       "name": "Health",
+      "auth": { "type": "noauth" },
       "request": {
         "method": "GET",
         "url": "{{rootUrl}}/health"
@@ -46,6 +54,7 @@
       "item": [
         {
           "name": "Register",
+          "auth": { "type": "noauth" },
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/auth/register",
@@ -58,6 +67,7 @@
         },
         {
           "name": "Login",
+          "auth": { "type": "noauth" },
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/auth/login",
@@ -66,7 +76,73 @@
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('authToken', json.token); }",
+                  "if (json.refreshToken) { pm.collectionVariables.set('refreshToken', json.refreshToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('authToken', json.token); }",
+                  "if (json.refreshToken) { pm.collectionVariables.set('refreshToken', json.refreshToken); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "auth": { "type": "inherit" },
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 204) {",
+                  "  pm.collectionVariables.unset('authToken');",
+                  "  pm.collectionVariables.unset('refreshToken');",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

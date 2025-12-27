@@ -104,6 +104,26 @@ const router = express.Router();
  *         description: Loan not found
  */
 router.post(
+  '/presign',
+  authenticate,
+  authorize(
+    roles.ADMIN,
+    roles.LO_RETAIL,
+    roles.LO_TPO,
+    roles.BROKER,
+    roles.BORROWER
+  ),
+  [
+    body('loanId').isMongoId().withMessage('Invalid loan ID'),
+    body('documentType').isString().notEmpty(),
+    body('fileName').optional().isString(),
+    body('mimeType').isIn(['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']),
+    body('fileSize').optional().isInt({ min: 1 }),
+  ],
+  documentUploadController.createPresignedUpload
+);
+
+router.post(
   '/upload',
   authenticate,
   upload.array('files', 5),

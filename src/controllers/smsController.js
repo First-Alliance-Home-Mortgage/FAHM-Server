@@ -7,6 +7,20 @@ const smsService = require('../services/smsService');
 const encompassService = require('../services/encompassService');
 const logger = require('../utils/logger');
 const roles = require('../config/roles');
+const twilio = require('twilio');
+const { security } = require('../config/env');
+
+function verifyTwilioSignature(req) {
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!authToken) {
+    logger.warn('TWILIO_AUTH_TOKEN not set; webhook signature verification skipped');
+    return true;
+  }
+  const signature = req.get('x-twilio-signature');
+  if (!signature) return false;
+  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  return twilio.validateRequest(authToken, signature, url, req.body || {});
+}
 
 /**
  * Send SMS message
@@ -125,6 +139,10 @@ exports.sendMessage = async (req, res, next) => {
  */
 exports.receiveWebhook = async (req, res, next) => {
   try {
+    if (!verifyTwilioSignature(req)) {
+      return res.status(401).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+    }
+
     const { MessageSid, From, To, Body, NumMedia, MediaUrl0, MediaContentType0 } = req.body;
 
     // Find sender and recipient users
@@ -216,6 +234,10 @@ exports.receiveWebhook = async (req, res, next) => {
  */
 exports.statusWebhook = async (req, res, next) => {
   try {
+    if (!verifyTwilioSignature(req)) {
+      return res.status(401).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+    }
+
     const { MessageSid, MessageStatus, ErrorCode, ErrorMessage } = req.body;
 
     const smsMessage = await SMSMessage.findOne({ twilioMessageSid: MessageSid });
