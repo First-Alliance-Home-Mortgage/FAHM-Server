@@ -9,14 +9,8 @@ const required = [
 
 // Important but environment-specific keys that we warn on (not fatal for local dev)
 const recommended = [
-  'DB_ENGINE',
   'AZURE_STORAGE_CONNECTION_STRING',
   'AZURE_BLOB_CONTAINER',
-  'MSSQL_SERVER',
-  'MSSQL_USER',
-  'MSSQL_PASSWORD',
-  'MSSQL_DATABASE',
-  'MSSQL_PORT',
   'OPTIMAL_BLUE_CLIENT_ID',
   'OPTIMAL_BLUE_CLIENT_SECRET',
   'TOTAL_EXPERT_API_KEY',
@@ -38,23 +32,11 @@ const recommended = [
 });
 
 module.exports = {
-  dbEngine: process.env.DB_ENGINE || 'mongo',
   port: Number(process.env.PORT || 4000),
   mongoUri: process.env.MONGO_URI,
   jwtSecret: process.env.JWT_SECRET,
   refreshTokenExpiryDays: Number(process.env.REFRESH_TOKEN_EXPIRATION_DAYS || 30),
   logLevel: process.env.LOG_LEVEL || 'info',
-  sql: {
-    server: process.env.MSSQL_SERVER,
-    port: Number(process.env.MSSQL_PORT || 1433),
-    user: process.env.MSSQL_USER,
-    password: process.env.MSSQL_PASSWORD,
-    database: process.env.MSSQL_DATABASE,
-    encrypt: process.env.MSSQL_ENCRYPT !== 'false',
-    trustServerCertificate: process.env.MSSQL_TRUST_SERVER_CERTIFICATE === 'true',
-    poolMin: Number(process.env.MSSQL_POOL_MIN || 0),
-    poolMax: Number(process.env.MSSQL_POOL_MAX || 10),
-  },
   storage: {
     azureConnectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
     container: process.env.AZURE_BLOB_CONTAINER || 'loan-documents',

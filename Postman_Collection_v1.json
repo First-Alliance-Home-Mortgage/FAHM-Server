@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "FAHM API",
-    "description": "FAHM Server REST API - Node.js/Express backend for loan application management",
+    "description": "FAHM Server REST API - Node.js/Express backend for loan application management (MongoDB-only; MSSQL removed)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

@@ -12,7 +12,8 @@
     "test:watch": "jest --watch",
     "test:unit": "jest --testPathPattern=__tests__/unit",
     "test:integration": "jest --testPathPattern=__tests__/integration",
-    "test:ci": "jest --ci --coverage --maxWorkers=2"
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "seed:users": "node scripts/seedUsers.js"
   },
   "engines": {
     "node": ">=18"
@@ -37,11 +38,9 @@
     "helmet": "^8.0.0",
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.2",
-    "knex": "^3.1.0",
     "mime-types": "^3.0.2",
     "mongoose": "^8.7.3",
     "morgan": "^1.10.0",
-    "mssql": "^10.0.1",
     "multer": "^2.0.2",
     "multer-azure-blob-storage": "^1.2.0",
     "node-cron": "^4.2.1",

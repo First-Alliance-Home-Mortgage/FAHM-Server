@@ -1,6 +1,5 @@
-const { dbEngine } = require('../config/env');
 const AuditLog = require('../models/AuditLog');
-const { auditLogRepository } = require('../repositories');
+const logger = require('./logger');
 
 /**
  * Persist an audit log entry.
@@ -27,34 +26,23 @@ async function audit(params, req) {
       entry.userAgent = req.headers['user-agent'];
     }
 
-    if (dbEngine === 'mssql') {
-      await auditLogRepository.insert({
-        userId: entry.user,
-        action: entry.action,
-        entityType: entry.entityType,
-        entityId: entry.entityId,
-        status: entry.status,
-        ip: entry.ip,
-        userAgent: entry.userAgent,
-        metadata: entry.metadata,
-      });
-    } else {
-      await AuditLog.create({
-        user: entry.user,
-        action: entry.action,
-        entityType: entry.entityType,
-        entityId: entry.entityId,
-        status: entry.status,
-        ip: entry.ip,
-        userAgent: entry.userAgent,
-        metadata: entry.metadata,
-      });
-    }
+    await AuditLog.create({
+      user: entry.user,
+      action: entry.action,
+      entityType: entry.entityType,
+      entityId: entry.entityId,
+      status: entry.status,
+      ip: entry.ip,
+      userAgent: entry.userAgent,
+      metadata: entry.metadata,
+    });
   } catch (err) {
-    // Avoid throwing in audit path; log to console as a fallback.
-    // In production, wire to real logger/metrics.
-    // eslint-disable-next-line no-console
-    console.error('audit log failed', err.message);
+    // Avoid throwing in audit path; capture warning for observability without blocking caller.
+    if (req?.log) {
+      req.log.warn('audit log failed', { err, action: params?.action });
+    } else {
+      logger.warn('audit log failed', { err, action: params?.action });
+    }
   }
 }
 

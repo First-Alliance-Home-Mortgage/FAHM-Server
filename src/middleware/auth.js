@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
-const { jwtSecret, dbEngine } = require('../config/env');
+const { jwtSecret } = require('../config/env');
 const User = require('../models/User');
-const { userRepository } = require('../repositories');
 const { hasCapability } = require('../config/roles');
 const logger = require('../utils/logger');
 
@@ -17,13 +16,7 @@ const authenticate = async (req, res, next) => {
   try {
     const payload = jwt.verify(token, jwtSecret);
 
-    if (dbEngine === 'mssql') {
-      const found = await userRepository.findById(payload.sub);
-      if (!found) return next(createError(401, 'User not found'));
-      req.user = { ...found, _id: found.id }; // maintain shape expected by controllers/tests
-    } else {
-      req.user = await User.findById(payload.sub).select('-password');
-    }
+    req.user = await User.findById(payload.sub).select('-password');
 
     if (!req.user) return next(createError(401, 'User not found'));
     if (req.user.isActive === false) return next(createError(403, 'User is inactive'));

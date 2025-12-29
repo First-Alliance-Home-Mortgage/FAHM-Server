@@ -1,47 +1,19 @@
-# FAHM Server – AI Assistant Brief
+# FAHM Server – AI Assistant Guide
 
-## System Map
-- Pure Node.js/Express REST API; server.js boots app.js, which wires middleware and mounts /api/v1 routers from src/routes.
-- Controllers in src/controllers stay thin: parse/validate input, call services/helpers, shape JSON.
-- Data access uses Mongoose models in src/models via src/db/mongoose.js. No raw Mongo queries.
-- Shared utilities live under src/services (external systems) and src/utils (logger, async wrappers, token helpers).
-
-## Auth & RBAC
-- JWT auth only; tokens issued by services/tokenService.js, verified in middleware/auth.js which attaches req.user.
-- Role constants defined in config/roles.js; authorization middleware expects explicit allow-lists per route.
-- Borrower-facing queries must scope by req.user.id (see loanController.list for expected filtering pattern).
-
-## Coding Conventions
-- CommonJS everywhere (require/module.exports). Mixing ESM triggers lint issues.
-- Wrap async handlers with utils/asyncHandler; bubble errors via next(err) and let middleware/error.js format responses.
-- Validation lives alongside routes using express-validator; controllers must check validationResult before running logic.
-- Use logger.info/error from utils/logger.js instead of console.*; prefix intentionally unused vars with _ to satisfy lint rules.
-
-## Core Domains
-- Loans & pipeline: loanController, dashboardController, rateController manage borrower lifecycle, milestones, pipeline KPIs.
-- Calculator & rate shopping: calculatorController, rateAlertController, services/optimalBlueService.js provide payments, APR, alerts.
-- Documents & uploads: legacy documentController plus new Azure/POS flow in documentUploadController + services/azureBlobService.js / posUploadService.js.
-- Engagement: business cards, preapproval letters, consent/persona views, referral sources, chatbot, SMS texting each have dedicated controller + model per README/docs.
-- POS connectivity: posController (Blend/Big POS SSO) and posLinkController (sessionized handoff) share OAuth helpers and audit logging.
-
-## External Integrations
-- Encompass LOS, Total Expert CRM, Optimal Blue rates, Xactus credit, Azure AD B2C, Twilio SMS, Power BI, Azure Blob all have service modules with cached OAuth tokens and retry-friendly helpers.
-- Services return plain JS objects; controllers handle serialization. Extend existing helpers when adding endpoints so refresh/expiry logic stays centralized.
-
-## Jobs & Async Work
-- Recurring work (rate sync, CRM sync, Encompass sync, metrics aggregation, retention cleanup) lives under src/jobs and is scheduled from src/schedulers bootstrap files. Follow that pattern for new cron tasks.
-
-## Environment & Config
-- Required vars validated in config/env.js (MONGO_URI, JWT_SECRET, per-integration creds, etc.). Add new env requirements there so boot fails fast when misconfigured.
-- No .env committed; document newly introduced settings in README when adding dependencies.
-
-## Development Workflow
-- npm install → npm run dev (nodemon) for local work, npm start for production profile.
-- Tests use Jest + Supertest (npm test); suites live under __tests__/unit and __tests__/integration.
-- Swagger/OpenAPI served from src/config/swagger.js and exposed at /api-docs for quick manual verification of new endpoints.
-
-## Contribution Tips
-- Keep router registration centralized in src/routes/index.js; every controller addition needs an entry there plus auth/permission guards.
-- Prefer feature-focused helpers/services over bloating controllers; most integrations already expose service shells you can extend.
-- When touching long-running flows (uploads, POS sessions, chatbot, alerts), ensure analytics counters and audit logs stay consistent—they drive dashboards and compliance reporting.
+- **Architecture**: Pure Node.js/Express REST API. [src/server.js](src/server.js) boots [src/app.js](src/app.js) which sets CORS/helmet/morgan, injects request IDs + child logger, serves Swagger, then mounts /api/v1 via [src/routes/index.js](src/routes/index.js).
+- **Language/conventions**: CommonJS only. Use [src/utils/asyncHandler.js](src/utils/asyncHandler.js) for async controllers, `express-validator` for input checks, and let [src/middleware/error.js](src/middleware/error.js) format errors. Avoid console.*; use [src/utils/logger.js](src/utils/logger.js) (JSON logs with requestId/user context via `req.log`).
+- **Auth & RBAC**: JWT issued by [src/services/tokenService.js](src/services/tokenService.js), verified in [src/middleware/auth.js](src/middleware/auth.js) (attaches `req.user`, rejects inactive users). Use `authorize({ roles, capabilities })` with constants in [src/config/roles.js](src/config/roles.js). Borrower-facing queries must scope by `req.user` (see [src/controllers/loanController.js](src/controllers/loanController.js) list filter).
+- **Data access**: MongoDB only via [src/db/mongoose.js](src/db/mongoose.js) and Mongoose models in [src/models](src/models). No SQL backends are supported.
+- **Config/env**: [src/config/env.js](src/config/env.js) loads dotenv and warns on missing recommended integration keys; required: `MONGO_URI`, `JWT_SECRET`. `CORS_ORIGINS` controls the allowlist; port defaults to 4000. Shared defaults live in [src/config/defaults.js](src/config/defaults.js) (upload size/types, POS token TTL, quiet hours).
+- **Routing pattern**: Routes are grouped per feature under [src/routes](src/routes) (auth, loans, documents, POS, CRM, Encompass, dashboard, rate alerts, chatbot, etc.) and wired centrally in [src/routes/index.js](src/routes/index.js). Keep controllers thin: validate → auth/authorize → call services/helpers → shape JSON.
+- **Logging & audit**: Request-scoped logger is attached in [src/app.js](src/app.js); prefer `req.log.*`. Persist audit trails with [src/utils/audit.js](src/utils/audit.js); do not throw on audit failures. Include metadata like loanId/posApplicationId where relevant.
+- **Validation & errors**: Always check `validationResult` before business logic (pattern in [src/controllers/documentUploadController.js](src/controllers/documentUploadController.js)). Return via `next(createError(status, message|{errors}))`; error middleware maps to JSON and hides stack in production.
+- **Uploads & storage**: Document uploads flow through [src/controllers/documentUploadController.js](src/controllers/documentUploadController.js) using Azure Blob via [src/services/azureBlobService.js](src/services/azureBlobService.js). Enforce MIME allowlist (pdf/png/jpg), 10MB limit, and loan access checks (borrower/assigned officer/admin). POS sync happens async to Blend/Big POS/Encompass via `posUploadService`; deletions also remove blobs.
+- **POS & referral flows**: Handoff tokens and SSO are in [src/controllers/posController.js](src/controllers/posController.js) (rate-limited, SSRF-guarded URLs, audits). Sessionized, shareable links live in [src/controllers/posLinkController.js](src/controllers/posLinkController.js) using `posLinkService` and `POSSession`; enforce owner/LO/admin access on session reads.
+- **Rates & alerts**: Optimal Blue integration feeds rate sheets and alerts. Scheduler in [src/jobs/rateSyncJob.js](src/jobs/rateSyncJob.js) fetches rates, pricing, and runs alert checks (cron at 7:00/7:15 and every 30m). Controllers in [src/controllers/rateAlertController.js](src/controllers/rateAlertController.js) enforce per-user ownership and validation.
+- **Analytics/Dashboard**: [src/controllers/dashboardController.js](src/controllers/dashboardController.js) gates Power BI report embeds and metrics by role (LO/branch/admin). Uses `powerBIService` for embed configs and applies user/branch/region filters before returning.
+- **Schedulers**: [src/server.js](src/server.js) starts Mongo then kicks off Encompass/CRM/FCRA retention/metrics aggregation/rate sync schedulers plus the rate alert scheduler in [src/schedulers/rateAlertScheduler.js](src/schedulers/rateAlertScheduler.js). Long-running additions should follow this startup pattern.
+- **Swagger**: Docs served at `/api-docs` via [src/config/swagger.js](src/config/swagger.js); JSON at `/api-docs.json`.
+- **Testing/build**: Scripts in [package.json](package.json): `npm run dev` (nodemon), `npm start`, `npm test` (Jest + Supertest; unit and integration), `npm test:unit`, `npm test:integration`. Node >=18 required.
+- **Contribution tips**: Register new routes in the index router, add auth/authorize guards, and align with existing audit/logging patterns. For borrower-scoped resources, always filter by `req.user` and populate minimal fields. Document new env vars in README and add validation in `config/env.js`.
 

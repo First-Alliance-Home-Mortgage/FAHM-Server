@@ -1,6 +1,7 @@
 jest.mock('../../src/models/AuditLog');
 
 const AuditLog = require('../../src/models/AuditLog');
+const logger = require('../../src/utils/logger');
 const { audit } = require('../../src/utils/audit');
 
 describe('utils/audit', () => {
@@ -31,14 +32,17 @@ describe('utils/audit', () => {
     });
   });
 
-  it('swallows errors and logs to console', async () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  it('swallows errors and logs a warning', async () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
     AuditLog.create.mockRejectedValue(new Error('db down'));
 
     await audit({ action: 'test.action' });
 
-    expect(consoleSpy).toHaveBeenCalledWith('audit log failed', 'db down');
-    consoleSpy.mockRestore();
+    expect(warnSpy).toHaveBeenCalledWith(
+      'audit log failed',
+      expect.objectContaining({ action: 'test.action', err: expect.any(Error) }),
+    );
+    warnSpy.mockRestore();
   });
 });
 
