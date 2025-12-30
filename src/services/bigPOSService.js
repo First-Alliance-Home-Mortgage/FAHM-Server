@@ -362,7 +362,7 @@ class BigPOSService {
    * @param {String} signature - Webhook signature header
    * @returns {Boolean} - Valid signature
    */
-  verifyWebhookSignature(payload, signature) {
+  verifyWebhookSignature(_payload, _signature) {
     // Implement HMAC signature verification
     // For now, return true (implement with crypto.createHmac when webhook secret available)
     logger.warn('Big POS webhook signature verification not implemented');

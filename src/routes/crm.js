@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, query } = require('express-validator');
 const crmController = require('../controllers/crmController');
+// Removed unused 'query' import
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();

@@ -3,7 +3,7 @@ jest.mock('../../src/services/azureBlobService');
 jest.mock('../../src/models/LoanApplication');
 jest.mock('../../src/models/Document');
 
-const createError = require('http-errors');
+// ...existing code...
 const { validationResult } = require('express-validator');
 const azureBlobService = require('../../src/services/azureBlobService');
 const LoanApplication = require('../../src/models/LoanApplication');

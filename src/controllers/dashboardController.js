@@ -1,10 +1,8 @@
 const createError = require('http-errors');
-const { validationResult } = require('express-validator');
 const DashboardReport = require('../models/DashboardReport');
 const DashboardMetric = require('../models/DashboardMetric');
 const BranchPerformance = require('../models/BranchPerformance');
 const LoanApplication = require('../models/LoanApplication');
-const User = require('../models/User');
 const powerBIService = require('../services/powerBIService');
 const logger = require('../utils/logger');
 const roles = require('../config/roles');

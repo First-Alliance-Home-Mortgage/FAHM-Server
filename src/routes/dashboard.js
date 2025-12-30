@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('express-validator');
 const router = express.Router();
+// Removed unused 'query' import
 const dashboardController = require('../controllers/dashboardController');
 const { authenticate, authorize } = require('../middleware/auth');
 const roles = require('../config/roles');

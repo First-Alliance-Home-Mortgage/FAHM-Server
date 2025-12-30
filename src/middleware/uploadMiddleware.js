@@ -1,6 +1,6 @@
 const multer = require('multer');
 const path = require('path');
-const mime = require('mime-types');
+// ...existing code...
 
 // Allowed MIME types
 const ALLOWED_MIME_TYPES = [

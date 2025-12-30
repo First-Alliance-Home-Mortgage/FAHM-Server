@@ -1,7 +1,7 @@
 jest.mock('../../src/models/User');
 jest.mock('jsonwebtoken');
 
-const createError = require('http-errors');
+// ...existing code...
 const jwt = require('jsonwebtoken');
 const User = require('../../src/models/User');
 const { authenticate, authorize } = require('../../src/middleware/auth');

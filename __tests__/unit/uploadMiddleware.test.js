@@ -1,7 +1,6 @@
 const multer = require('multer');
 
 const {
-  upload,
   handleMulterError,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE,

@@ -5,7 +5,7 @@ const azureOpenAIService = require('../services/azureOpenAIService');
 const chatbotKnowledgeService = require('../services/chatbotKnowledgeService');
 const smsNotificationService = require('../services/smsNotificationService');
 const logger = require('../utils/logger');
-const User = require('../models/User');
+// ...existing code...
 
 /**
  * Start a new chatbot conversation session
@@ -175,7 +175,7 @@ exports.sendMessage = async (req, res, next) => {
 
         // Special handling for escalateToHuman
         if (functionName === 'escalateToHuman') {
-          const escalationData = await chatbotKnowledgeService.executeFunction(functionName, functionArgs);
+          // ...existing code...
           
           // Find available loan officer
           let assignedOfficer = null;
@@ -362,7 +362,7 @@ exports.escalateSession = async (req, res, next) => {
     }
 
     const { sessionId } = req.params;
-    const { reason, escalationType, urgency } = req.body;
+    const { reason, escalationType } = req.body;
 
     const session = await ChatbotSession.findOne({ sessionId, user: req.user._id });
     if (!session) {

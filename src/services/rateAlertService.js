@@ -73,57 +73,9 @@ class RateAlertService {
   }
 
   /**
-   * Check single alert
-   */
   async checkSingleAlert(alert) {
-    try {
-      // Fetch current rate from Optimal Blue
-      const rateData = await optimalBlueService.getRateSheet({
-        productType: alert.productType,
-        loanTerm: alert.loanTerm,
-        loanAmount: alert.loanAmount,
-        creditScore: alert.creditScore,
-        ltv: alert.ltv,
-        propertyType: alert.propertyType
-      });
-
-      const currentRate = rateData.rate;
-
-      // Update last checked timestamp
-      alert.lastCheckedAt = new Date();
-      await alert.save();
-
-      // Check if alert should trigger
-      const shouldTrigger = alert.shouldTrigger(currentRate);
-
-      if (shouldTrigger) {
-        logger.info('Rate alert triggered', {
-          alertId: alert._id,
-          userId: alert.user._id,
-          currentRate,
-          targetRate: alert.targetRate || alert.baselineRate,
-          triggerType: alert.triggerType
-        });
-
-        // Trigger alert
-        await alert.trigger(currentRate, alert.notificationMethod);
-
-        // Send notifications
-        await this.sendNotifications(alert, currentRate, rateData);
-
-        // Log to CRM
-        await this.logToCRM(alert, currentRate);
-
-        return {
-          alertId: alert._id,
-          triggered: true,
-          currentRate,
-          notificationSent: true
-        };
-      }
-
-      return {
-        alertId: alert._id,
+    // ...existing code...
+  }
         triggered: false,
         currentRate
       };

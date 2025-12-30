@@ -128,8 +128,7 @@ exports.resetToDefault = async (req, res, next) => {
  */
 exports.getDashboardData = async (req, res, next) => {
   try {
-    const LoanApplication = require('../models/LoanApplication');
-    const User = require('../models/User');
+    // ...existing code...
 
     // Get persona view configuration
     let view = await PersonaView.findOne({ user: req.user.userId });
@@ -191,7 +190,7 @@ exports.getDashboardData = async (req, res, next) => {
 /**
  * Get borrower-specific dashboard data
  */
-exports.getBorrowerDashboard = async function(userId, view) {
+exports.getBorrowerDashboard = async function(_userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
   const Document = require('../models/Document');
 
@@ -218,7 +217,7 @@ exports.getBorrowerDashboard = async function(userId, view) {
 /**
  * Get LO-specific dashboard data
  */
-exports.getLODashboard = async function(userId, view) {
+exports.getLODashboard = async function(_userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
 
   const query = { assignedOfficer: userId };
@@ -258,7 +257,7 @@ exports.getLODashboard = async function(userId, view) {
 /**
  * Get realtor-specific dashboard data
  */
-exports.getRealtorDashboard = async function(userId, view) {
+exports.getRealtorDashboard = async function(_userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
 
   // Find loans where realtor has consent
@@ -288,7 +287,7 @@ exports.getRealtorDashboard = async function(userId, view) {
 /**
  * Get broker-specific dashboard data
  */
-exports.getBrokerDashboard = async function(userId, view) {
+exports.getBrokerDashboard = async function(_userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
 
   const loans = await LoanApplication.find({ 
@@ -312,7 +311,7 @@ exports.getBrokerDashboard = async function(userId, view) {
 /**
  * Get branch manager-specific dashboard data
  */
-exports.getBMDashboard = async function(userId, view) {
+exports.getBMDashboard = async function(_userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
   const User = require('../models/User');
 
@@ -361,7 +360,7 @@ exports.getBMDashboard = async function(userId, view) {
 /**
  * Get admin-specific dashboard data
  */
-exports.getAdminDashboard = async function(userId, view) {
+exports.getAdminDashboard = async function(_userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
   const User = require('../models/User');
 

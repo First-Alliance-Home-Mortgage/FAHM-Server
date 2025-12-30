@@ -292,11 +292,11 @@ class BlendPOSService {
    * @param {String} signature - Webhook signature header
    * @returns {Boolean} - Valid signature
    */
-  verifyWebhookSignature(payload, signature) {
+  verifyWebhookSignature(_payload, _signature) {
     // Implement HMAC signature verification
     // For now, return true (implement with crypto.createHmac when webhook secret available)
     logger.warn('Blend webhook signature verification not implemented');
-    return true;
+    return true; // This line remains unchanged
   }
 
   /**

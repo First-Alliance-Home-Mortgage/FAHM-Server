@@ -15,7 +15,7 @@ describe('logger', () => {
   const loadLogger = (level) => {
     process.env.LOG_LEVEL = level;
     jest.resetModules();
-    // eslint-disable-next-line global-require
+     
     return require('../../src/utils/logger');
   };
 

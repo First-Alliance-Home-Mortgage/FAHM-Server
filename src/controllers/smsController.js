@@ -8,7 +8,6 @@ const encompassService = require('../services/encompassService');
 const logger = require('../utils/logger');
 const roles = require('../config/roles');
 const twilio = require('twilio');
-const { security } = require('../config/env');
 
 function verifyTwilioSignature(req) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -137,7 +136,7 @@ exports.sendMessage = async (req, res, next) => {
  * POST /api/v1/sms/webhook/receive
  * Access: Public (Twilio webhook)
  */
-exports.receiveWebhook = async (req, res, next) => {
+exports.receiveWebhook = async (req, res, _next) => {
   try {
     if (!verifyTwilioSignature(req)) {
       return res.status(401).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
@@ -232,7 +231,7 @@ exports.receiveWebhook = async (req, res, next) => {
  * POST /api/v1/sms/webhook/status
  * Access: Public (Twilio webhook)
  */
-exports.statusWebhook = async (req, res, next) => {
+exports.statusWebhook = async (req, res, _next) => {
   try {
     if (!verifyTwilioSignature(req)) {
       return res.status(401).type('text/xml').send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
@@ -276,7 +275,7 @@ exports.statusWebhook = async (req, res, next) => {
  * GET /api/v1/sms/conversation/:phone
  * Access: Authenticated users
  */
-exports.getConversation = async (req, res, next) => {
+exports.getConversation = async (req, res, _next) => {
   try {
     const { phone } = req.params;
     const { limit = 50 } = req.query;
@@ -305,7 +304,7 @@ exports.getConversation = async (req, res, next) => {
  * GET /api/v1/sms/loan/:loanId
  * Access: Authenticated users
  */
-exports.getLoanMessages = async (req, res, next) => {
+exports.getLoanMessages = async (req, res, _next) => {
   try {
     const { loanId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -355,7 +354,7 @@ exports.getLoanMessages = async (req, res, next) => {
  * GET /api/v1/sms/my-messages
  * Access: Authenticated users
  */
-exports.getMyMessages = async (req, res, next) => {
+exports.getMyMessages = async (req, res, _next) => {
   try {
     const { page = 1, limit = 50, direction } = req.query;
 
@@ -405,7 +404,7 @@ exports.getMyMessages = async (req, res, next) => {
  * PATCH /api/v1/sms/:messageId/read
  * Access: Authenticated users
  */
-exports.markAsRead = async (req, res, next) => {
+exports.markAsRead = async (req, res, _next) => {
   try {
     const { messageId } = req.params;
 
@@ -439,7 +438,7 @@ exports.markAsRead = async (req, res, next) => {
  * GET /api/v1/sms/stats
  * Access: Loan Officers, Branch Managers, Admins
  */
-exports.getStats = async (req, res, next) => {
+exports.getStats = async (req, res, _next) => {
   try {
     const { startDate, endDate, loanId } = req.query;
 

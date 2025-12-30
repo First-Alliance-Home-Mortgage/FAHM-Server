@@ -6,7 +6,7 @@ jest.mock('express-validator', () => ({
 }));
 jest.mock('../../src/services/refreshTokenService');
 
-const createError = require('http-errors');
+// ...existing code...
 const User = require('../../src/models/User');
 const tokenService = require('../../src/services/tokenService');
 const refreshTokenService = require('../../src/services/refreshTokenService');

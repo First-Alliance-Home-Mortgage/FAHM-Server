@@ -11,7 +11,7 @@ jest.mock('../../src/services/bigPOSService', () => ({
 jest.mock('../../src/models/LoanApplication');
 jest.mock('../../src/models/User');
 
-const createError = require('http-errors');
+// ...existing code...
 const posController = require('../../src/controllers/posController');
 const blendPOSService = require('../../src/services/blendPOSService');
 const bigPOSService = require('../../src/services/bigPOSService');

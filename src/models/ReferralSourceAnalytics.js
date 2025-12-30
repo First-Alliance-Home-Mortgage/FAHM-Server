@@ -254,7 +254,7 @@ referralSourceAnalyticsSchema.statics.getAnalyticsByDateRange = function(
 referralSourceAnalyticsSchema.statics.getTopPerformers = function(
   startDate,
   endDate,
-  metric = 'revenue.totalLoanVolume',
+  // metric = 'revenue.totalLoanVolume',
   limit = 10
 ) {
   return this.aggregate([

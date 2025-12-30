@@ -1,5 +1,5 @@
 const PDFDocument = require('pdfkit');
-const { PassThrough } = require('stream');
+// ...existing code...
 const logger = require('../utils/logger');
 
 class PDFGenerationService {

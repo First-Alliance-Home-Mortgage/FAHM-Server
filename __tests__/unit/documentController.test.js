@@ -4,7 +4,7 @@ jest.mock('express-validator', () => ({
   validationResult: jest.fn(),
 }));
 
-const createError = require('http-errors');
+// ...existing code...
 const Document = require('../../src/models/Document');
 const { audit } = require('../../src/utils/audit');
 const { validationResult } = require('express-validator');
