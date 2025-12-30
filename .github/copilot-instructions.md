@@ -1,19 +1,46 @@
-# FAHM Server – AI Assistant Guide
 
-- **Architecture**: Pure Node.js/Express REST API. [src/server.js](src/server.js) boots [src/app.js](src/app.js) which sets CORS/helmet/morgan, injects request IDs + child logger, serves Swagger, then mounts /api/v1 via [src/routes/index.js](src/routes/index.js).
-- **Language/conventions**: CommonJS only. Use [src/utils/asyncHandler.js](src/utils/asyncHandler.js) for async controllers, `express-validator` for input checks, and let [src/middleware/error.js](src/middleware/error.js) format errors. Avoid console.*; use [src/utils/logger.js](src/utils/logger.js) (JSON logs with requestId/user context via `req.log`).
-- **Auth & RBAC**: JWT issued by [src/services/tokenService.js](src/services/tokenService.js), verified in [src/middleware/auth.js](src/middleware/auth.js) (attaches `req.user`, rejects inactive users). Use `authorize({ roles, capabilities })` with constants in [src/config/roles.js](src/config/roles.js). Borrower-facing queries must scope by `req.user` (see [src/controllers/loanController.js](src/controllers/loanController.js) list filter).
-- **Data access**: MongoDB only via [src/db/mongoose.js](src/db/mongoose.js) and Mongoose models in [src/models](src/models). No SQL backends are supported.
-- **Config/env**: [src/config/env.js](src/config/env.js) loads dotenv and warns on missing recommended integration keys; required: `MONGO_URI`, `JWT_SECRET`. `CORS_ORIGINS` controls the allowlist; port defaults to 4000. Shared defaults live in [src/config/defaults.js](src/config/defaults.js) (upload size/types, POS token TTL, quiet hours).
-- **Routing pattern**: Routes are grouped per feature under [src/routes](src/routes) (auth, loans, documents, POS, CRM, Encompass, dashboard, rate alerts, chatbot, etc.) and wired centrally in [src/routes/index.js](src/routes/index.js). Keep controllers thin: validate → auth/authorize → call services/helpers → shape JSON.
-- **Logging & audit**: Request-scoped logger is attached in [src/app.js](src/app.js); prefer `req.log.*`. Persist audit trails with [src/utils/audit.js](src/utils/audit.js); do not throw on audit failures. Include metadata like loanId/posApplicationId where relevant.
-- **Validation & errors**: Always check `validationResult` before business logic (pattern in [src/controllers/documentUploadController.js](src/controllers/documentUploadController.js)). Return via `next(createError(status, message|{errors}))`; error middleware maps to JSON and hides stack in production.
-- **Uploads & storage**: Document uploads flow through [src/controllers/documentUploadController.js](src/controllers/documentUploadController.js) using Azure Blob via [src/services/azureBlobService.js](src/services/azureBlobService.js). Enforce MIME allowlist (pdf/png/jpg), 10MB limit, and loan access checks (borrower/assigned officer/admin). POS sync happens async to Blend/Big POS/Encompass via `posUploadService`; deletions also remove blobs.
-- **POS & referral flows**: Handoff tokens and SSO are in [src/controllers/posController.js](src/controllers/posController.js) (rate-limited, SSRF-guarded URLs, audits). Sessionized, shareable links live in [src/controllers/posLinkController.js](src/controllers/posLinkController.js) using `posLinkService` and `POSSession`; enforce owner/LO/admin access on session reads.
-- **Rates & alerts**: Optimal Blue integration feeds rate sheets and alerts. Scheduler in [src/jobs/rateSyncJob.js](src/jobs/rateSyncJob.js) fetches rates, pricing, and runs alert checks (cron at 7:00/7:15 and every 30m). Controllers in [src/controllers/rateAlertController.js](src/controllers/rateAlertController.js) enforce per-user ownership and validation.
-- **Analytics/Dashboard**: [src/controllers/dashboardController.js](src/controllers/dashboardController.js) gates Power BI report embeds and metrics by role (LO/branch/admin). Uses `powerBIService` for embed configs and applies user/branch/region filters before returning.
-- **Schedulers**: [src/server.js](src/server.js) starts Mongo then kicks off Encompass/CRM/FCRA retention/metrics aggregation/rate sync schedulers plus the rate alert scheduler in [src/schedulers/rateAlertScheduler.js](src/schedulers/rateAlertScheduler.js). Long-running additions should follow this startup pattern.
-- **Swagger**: Docs served at `/api-docs` via [src/config/swagger.js](src/config/swagger.js); JSON at `/api-docs.json`.
-- **Testing/build**: Scripts in [package.json](package.json): `npm run dev` (nodemon), `npm start`, `npm test` (Jest + Supertest; unit and integration), `npm test:unit`, `npm test:integration`. Node >=18 required.
-- **Contribution tips**: Register new routes in the index router, add auth/authorize guards, and align with existing audit/logging patterns. For borrower-scoped resources, always filter by `req.user` and populate minimal fields. Document new env vars in README and add validation in `config/env.js`.
+# FAHM Server – AI Agent Coding Guide
+
+## Quickstart
+- Copy `.env.example` to `.env` and fill required values (`MONGO_URI`, `JWT_SECRET`, etc).
+- Install dependencies: `npm install`
+- Start dev server: `npm run dev` (nodemon, reloads on change)
+- Run tests: `npm test` (Jest + Supertest; see [__tests__](../../__tests__))
+- API docs: [http://localhost:4000/api-docs](http://localhost:4000/api-docs)
+
+## Architecture & Patterns
+- **REST API**: Node.js/Express, MongoDB (Mongoose). No SQL backends.
+- **Entry**: [src/server.js](../../src/server.js) → [src/app.js](../../src/app.js) (middleware, logger, Swagger, mounts `/api/v1` via [src/routes/index.js](../../src/routes/index.js)).
+- **Feature structure**: Each domain (auth, loans, docs, POS, CRM, etc) has its own controller, service, and route file under `src/`.
+- **Controllers**: Thin; always validate input, check auth/roles, call services/helpers, and shape JSON output. Use [src/utils/asyncHandler.js](../../src/utils/asyncHandler.js) for async controllers.
+- **Auth & RBAC**: JWT via [src/services/tokenService.js](../../src/services/tokenService.js), checked in [src/middleware/auth.js](../../src/middleware/auth.js). Use `authorize({ roles, capabilities })` (see [src/config/roles.js](../../src/config/roles.js)). Borrower queries must scope by `req.user`.
+- **Validation**: Use `express-validator` and check `validationResult` before business logic (see [src/controllers/documentUploadController.js](../../src/controllers/documentUploadController.js)).
+- **Logging**: Use [src/utils/logger.js](../../src/utils/logger.js) (JSON logs, requestId/user context via `req.log`). No `console.*`.
+- **Audit**: Persist with [src/utils/audit.js](../../src/utils/audit.js); never throw on audit failure. Include loanId/posApplicationId where relevant.
+- **Uploads**: [src/controllers/documentUploadController.js](../../src/controllers/documentUploadController.js) → [src/services/azureBlobService.js](../../src/services/azureBlobService.js). Enforce MIME allowlist, 10MB limit, and access checks.
+- **Integrations**: External systems (Encompass, POS, CRM, Optimal Blue, Twilio, etc) are isolated in `src/services` and `src/jobs`. See summaries in [summaries/](../../summaries/).
+- **Schedulers**: [src/server.js](../../src/server.js) starts Mongo, then launches jobs in [src/jobs](../../src/jobs) and [src/schedulers](../../src/schedulers).
+
+## Key Endpoints (examples)
+- `POST /api/v1/auth/login` – login, returns JWT
+- `GET /api/v1/users/me` – current user profile
+- `GET /api/v1/loans` – list loans (borrowers see their own)
+- `POST /api/v1/documents` – upload doc metadata
+- `GET /api/v1/notifications` – list notifications for user
+- See [README.md](../../README.md) for more
+
+## Contribution & Extension
+- Register new routes in [src/routes/index.js](../../src/routes/index.js)
+- Add auth/authorize guards to new endpoints
+- Align with audit/logging/validation patterns above
+- For borrower-scoped resources, always filter by `req.user` and return minimal fields
+- Document new env vars in README and add validation in [src/config/env.js](../../src/config/env.js)
+
+## Testing & Build
+- Run all tests: `npm test`
+- Unit only: `npm test:unit` | Integration only: `npm test:integration`
+- Node >=18 required
+
+---
+For more, see [README.md](../../README.md), [summaries/](../../summaries/), and [src/config/env.js](../../src/config/env.js).
 

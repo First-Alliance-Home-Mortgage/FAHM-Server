@@ -3,9 +3,42 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const { upload, handleMulterError } = require('../middleware/uploadMiddleware');
 const userController = require('../controllers/userController');
+
 const profilePictureController = require('../controllers/profilePictureController');
+const pushTokenController = require('../controllers/pushTokenController');
+
 
 const router = express.Router();
+/**
+ * @swagger
+ * /users/push-token:
+ *   post:
+ *     summary: Register or update Expo push token
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               expoPushToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Push token registered
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: User not found
+ */
+router.post(
+	'/push-token',
+	pushTokenController.validatePushToken,
+	pushTokenController.registerPushToken
+);
 
 /**
  * @swagger

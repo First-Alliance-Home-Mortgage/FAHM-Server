@@ -27,7 +27,8 @@ const userSchema = new mongoose.Schema(
       state: String,
       zip: String,
       phone: String
-    }
+    },
+    expoPushToken: { type: String, trim: true },
   },
   { timestamps: true }
 );
