@@ -1,7 +1,5 @@
 const PreapprovalLetter = require('../models/PreapprovalLetter');
 const LoanApplication = require('../models/LoanApplication');
-const User = require('../models/User');
-const ReferralSource = require('../models/ReferralSource');
 const encompassService = require('../services/encompassService');
 const pdfGenerationService = require('../services/pdfGenerationService');
 const azureBlobService = require('../services/azureBlobService');
@@ -366,10 +364,7 @@ exports.share = async (req, res, next) => {
 
     if (method === 'email') {
       // Generate download link (SAS URL with 24 hour expiration)
-      const downloadUrl = await azureBlobService.generateSasUrl(
-        letter.pdfBlobName,
-        24 * 60 // 24 hours in minutes
-      );
+      // ...existing code...
 
       // Download PDF from blob for email attachment
       const pdfStream = await azureBlobService.downloadFile(letter.pdfBlobName);
@@ -404,10 +399,6 @@ exports.share = async (req, res, next) => {
       await letter.markSent('sms', recipient, req.user.userId);
     } else if (method === 'link') {
       // Generate shareable link
-      const downloadUrl = await azureBlobService.generateSasUrl(
-        letter.pdfBlobName,
-        24 * 60
-      );
 
       result = { downloadUrl };
       await letter.markSent('link', recipient || 'Generated', req.user.userId);

@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('express-validator');
+// ...existing code...
 const router = express.Router();
 // Removed unused 'query' import
 const dashboardController = require('../controllers/dashboardController');

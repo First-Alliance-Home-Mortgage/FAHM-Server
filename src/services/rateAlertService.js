@@ -1,5 +1,4 @@
 const RateAlert = require('../models/RateAlert');
-const optimalBlueService = require('./optimalBlueService');
 const totalExpertService = require('./totalExpertService');
 const smsNotificationService = require('./smsNotificationService');
 const logger = require('../utils/logger');
@@ -88,7 +87,7 @@ class RateAlertService {
   /**
    * Send notifications based on alert preferences
    */
-  async sendNotifications(alert, currentRate, rateData) {
+  async sendNotifications(alert, currentRate, _rateData) {
     try {
       const user = alert.user;
       const method = alert.notificationMethod;

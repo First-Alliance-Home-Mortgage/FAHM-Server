@@ -20,7 +20,7 @@ async function calculateUserMetrics(userId, periodType, periodStart, periodEnd) 
     });
 
     const fundedLoans = loans.filter(l => l.status === 'funded');
-    const preapprovals = loans.filter(l => l.milestones?.some(m => m.name === 'Preapproval Issued'));
+    const preapprovalsList = loans.filter(l => l.milestones?.some(m => m.name === 'Preapproval Issued'));
 
     // Calculate metrics
     const metrics = {
@@ -32,7 +32,7 @@ async function calculateUserMetrics(userId, periodType, periodStart, periodEnd) 
       },
       preapprovals: {
         metricType: 'preapprovals',
-        value: preapprovals.length
+        value: preapprovalsList.length
       },
       funding_rate: {
         metricType: 'funding_rate',
@@ -56,7 +56,7 @@ async function calculateUserMetrics(userId, periodType, periodStart, periodEnd) 
     };
 
     // Save each metric
-    for (const [_key, metricData] of Object.entries(metrics)) {
+    for (const [, metricData] of Object.entries(metrics)) {
       await DashboardMetric.findOneAndUpdate(
         {
           metricType: metricData.metricType,
@@ -227,7 +227,7 @@ async function calculateRegionalMetrics(region, periodType, periodStart, periodE
     };
 
     // Save regional metrics
-    for (const [_key, metricData] of Object.entries(regionalMetrics)) {
+    for (const [, metricData] of Object.entries(regionalMetrics)) {
       await DashboardMetric.findOneAndUpdate(
         {
           metricType: metricData.metricType,

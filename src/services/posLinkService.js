@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const POSSession = require('../models/POSSession');
 const ReferralSource = require('../models/ReferralSource');
 const logger = require('../utils/logger');
@@ -137,9 +136,9 @@ exports.generatePOSLink = async (params) => {
       posSystem,
       branding: brandingConfig
     };
-  } catch (error) {
-    logger.error('Error generating POS link:', error);
-    throw error;
+  } catch (_error) {
+    logger.error('Error generating POS link:', _error);
+    throw _error;
   }
 };
 
@@ -384,7 +383,7 @@ exports.generateOAuthToken = (sessionId) => {
 exports.verifyOAuthToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Invalid or expired OAuth token');
   }
 };

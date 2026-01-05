@@ -3,7 +3,7 @@ const app = require('../../src/app');
 const mongoose = require('mongoose');
 const User = require('../../src/models/User');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
+// ...existing code...
 const path = require('path');
 const { jwtSecret } = require('../../src/config/env');
 

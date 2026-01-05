@@ -1,11 +1,10 @@
 const createError = require('http-errors');
-const { validationResult } = require('express-validator');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const azureBlobService = require('../services/azureBlobService');
 const User = require('../models/User');
 const logger = require('../utils/logger');
-const { ALLOWED_MIME_TYPES, MAX_FILE_SIZE } = require('../middleware/uploadMiddleware');
+// Removed unused variables: validationResult and ALLOWED_MIME_TYPES
 
 /**
  * Upload profile picture for the current user

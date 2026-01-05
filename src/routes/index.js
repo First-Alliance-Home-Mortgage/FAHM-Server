@@ -20,6 +20,8 @@ const personaViewRoutes = require('./personaViews');
 const referralSourceRoutes = require('./referralSources');
 const smsRoutes = require('./sms');
 const rateAlertRoutes = require('./rateAlerts');
+
+const menuRoutes = require('./menu');
 const chatbotRoutes = require('./chatbot');
 
 const router = express.Router();
@@ -46,6 +48,8 @@ router.use('/referral-sources', referralSourceRoutes);
 router.use('/sms', smsRoutes);
 router.use('/rate-alerts', rateAlertRoutes);
 router.use('/chatbot', chatbotRoutes);
+
+router.use('/menus', menuRoutes);
 
 module.exports = router;
 

@@ -384,9 +384,9 @@ exports.updateBranding = async (req, res, next) => {
  */
 exports.trackActivity = async (req, res, next) => {
   try {
-    const { activityType, loanAmount, productType } = req.body;
+    const { activityType, loanAmount } = req.body;
 
-    const referralSource = await ReferralSource.findById(req.params.id);
+      const referralSource = await ReferralSource.findById(req.params.id);
 
     if (!referralSource) {
       return next(createError(404, 'Referral source not found'));

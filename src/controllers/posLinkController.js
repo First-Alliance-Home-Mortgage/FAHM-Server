@@ -27,7 +27,6 @@ exports.generateLink = async (req, res, next) => {
       source,
       expirationMinutes,
       branding,
-      returnUrl
     } = req.body;
 
     const userId = req.user.userId;
@@ -165,7 +164,7 @@ exports.callback = async (req, res, next) => {
     if (oauthToken) {
       try {
         posLinkService.verifyOAuthToken(oauthToken);
-      } catch (error) {
+      } catch (_error) {
         return next(createError(401, 'Invalid OAuth token'));
       }
     }
@@ -196,7 +195,7 @@ exports.callback = async (req, res, next) => {
     });
   } catch (err) {
     logger.error(`Error in POS callback: ${err.message}`);
-    next(err);
+      next(createError(500, err.message));
   }
 };
 

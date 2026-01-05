@@ -36,7 +36,7 @@ class AzureADB2CService {
         tenantName: this.tenantName,
         policyName: this.policyName
       });
-    } catch (error) {
+    } catch (_error) {
         logger.error('Failed to initialize Azure AD B2C service:');
     }
   }
@@ -50,9 +50,9 @@ class AzureADB2CService {
       this.jwksCache = response.data;
       this.jwksCacheExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
       logger.info('JWKS cache refreshed');
-    } catch (error) {
+    } catch (_error) {
         logger.error('Failed to fetch JWKS:');
-      throw error;
+      throw _error;
     }
   }
 
@@ -95,9 +95,9 @@ class AzureADB2CService {
       }
 
       return decoded;
-    } catch (error) {
+    } catch (_error) {
         logger.error('Token validation failed:');
-      throw error;
+      throw _error;
     }
   }
 
@@ -114,7 +114,7 @@ class AzureADB2CService {
 
       const payload = Buffer.from(parts[1], 'base64').toString('utf8');
       return JSON.parse(payload);
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -145,9 +145,9 @@ class AzureADB2CService {
         refreshToken: response.data.refresh_token,
         expiresIn: response.data.expires_in
       };
-    } catch (error) {
+    } catch (_error) {
         logger.error('Failed to exchange code for tokens:');
-      throw error;
+      throw _error;
     }
   }
 
@@ -176,9 +176,9 @@ class AzureADB2CService {
         refreshToken: response.data.refresh_token,
         expiresIn: response.data.expires_in
       };
-    } catch (error) {
+    } catch (_error) {
         logger.error('Failed to refresh access token:');
-      throw error;
+      throw _error;
     }
   }
 
@@ -222,9 +222,9 @@ class AzureADB2CService {
       });
 
       return user;
-    } catch (error) {
+    } catch (_error) {
         logger.error('Failed to provision user:');
-      throw error;
+      throw _error;
     }
   }
 

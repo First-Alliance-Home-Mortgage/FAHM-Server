@@ -1,11 +1,11 @@
 const express = require('express');
 
-const { body, query } = require('express-validator');
+const { body } = require('express-validator');
 const creditController = require('../controllers/creditController');
 const { authenticate, authorize } = require('../middleware/auth');
 const roles = require('../config/roles');
 
-const router = express.Router();
+const router = express.Router(); // Removed unused 'query' import
 
 /**
  * @swagger
