@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">23.07% </span>
+                <span class="strong">76.92% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/13</span>
+                <span class='fraction'>10/13</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">37.5% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>3/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">23.07% </span>
+                <span class="strong">76.92% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/13</span>
+                <span class='fraction'>10/13</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -127,21 +127,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -176,22 +176,22 @@ const logger = require('./logger');
  * @param {Object} [params.metadata]
  * @param {Object} [req] - Express request (for user, ip, ua)
  */
-async function <span class="fstat-no" title="function not covered" >audit(</span>params, req) {
-<span class="cstat-no" title="statement not covered" >  try {</span>
-    const entry = <span class="cstat-no" title="statement not covered" >{</span>
+async function audit(params, req) {
+  try {
+    const entry = {
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      status: params.status || 'success',
+      status: params.status || <span class="branch-1 cbranch-no" title="branch not covered" >'success',</span>
       metadata: params.metadata,
     };
-<span class="cstat-no" title="statement not covered" >    if (req) {</span>
-<span class="cstat-no" title="statement not covered" >      entry.user = req.user?._id || req.user?.id;</span>
-<span class="cstat-no" title="statement not covered" >      entry.ip = req.ip;</span>
-<span class="cstat-no" title="statement not covered" >      entry.userAgent = req.headers['user-agent'];</span>
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (req) {
+      entry.user = req.user?._id || <span class="branch-1 cbranch-no" title="branch not covered" >req.user?.id;</span>
+      entry.ip = req.ip;
+      entry.userAgent = req.headers['user-agent'];
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    await AuditLog.create({</span>
+    await AuditLog.create({
       user: entry.user,
       action: entry.action,
       entityType: entry.entityType,
@@ -220,7 +220,7 @@ module.exports = { audit };
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-05T14:08:19.729Z
+                at 2026-01-05T17:50:46.874Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -14,7 +14,8 @@
     "test:integration": "jest --testPathPattern=__tests__/integration",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "seed:users": "node scripts/seedUsers.js",
-    "seed:menus": "node scripts/seedMenus.js"
+    "seed:menus": "node scripts/seedMenus.js",
+    "add-user": "node scripts/addUser.js"
   },
   "engines": {
     "node": ">=18"

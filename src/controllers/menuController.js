@@ -1,6 +1,6 @@
 const createError = require('http-errors');
 const { body, validationResult } = require('express-validator');
-const menuService = require('../services/menuService').default;
+const menuService = require('../services/menuService');
 const { audit } = require('../utils/audit');
 
 // Validation array for PUT /menus
@@ -28,11 +28,16 @@ exports.getMenus = async (req, res, next) => {
 
 exports.putMenus = async (req, res, next) => {
   try {
+    console.log('PUT /menus called with body:', req.body);
+    req.log.info('PUT /menus body (pre-validation)', { body: req.body });
     const errors = validationResult(req);
+    req.log.info('PUT /menus body (post-validation)', { body: req.body, errors: errors.array() });
+    console.log('Validation errors:', errors.array());
     if (!errors.isEmpty()) {
       return next(createError(400, { errors: errors.array() }));
     }
     const menus = req.body;
+    console.log('Received menus for update:', menus);
     // Check for unique ids
     const ids = menus.map(m => m.id);
     if (new Set(ids).size !== ids.length) {
