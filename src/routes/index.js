@@ -51,6 +51,7 @@ router.use('/rate-alerts', rateAlertRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/menus', menuRoutes);
 router.use('/roles', require('./role'));
+router.use('/capabilities', require('./capability'));
 router.use('/cms', cmsRoutes);
 
 module.exports = router;
