@@ -1,82 +1,55 @@
 
-# FAHM Server – AI Agent Coding Guide
+# FAHM Server – AI Agent Guide
 
 ## Quickstart
-- Copy `.env.example` to `.env` and fill required values (`MONGO_URI`, `JWT_SECRET`, etc)
-- Install dependencies: `npm install`
-- Start dev server: `npm run dev` (nodemon, reloads on change)
-- Run tests: `npm test` (Jest + Supertest; see [__tests__](__tests__))
-- API docs: [http://localhost:4000/api-docs](http://localhost:4000/api-docs)
+- Copy `.env.example` → `.env` and set `MONGO_URI`, `JWT_SECRET`.
+- Install deps: `npm install`; start dev: `npm run dev`.
+- Run tests: `npm test`; API docs: http://localhost:4000/api-docs.
 
-## Architecture & Patterns
-- **REST API**: Node.js/Express, MongoDB (Mongoose). No SQL backends.
-- **Entry**: [src/server.js](src/server.js) → [src/app.js](src/app.js) (middleware, logger, Swagger, mounts `/api/v1` via [src/routes/index.js](src/routes/index.js))
-- **Feature structure**: Each domain (auth, loans, docs, POS, CRM, etc) has its own controller, service, and route file under `src/`
-- **Controllers**: Thin; always validate input, check auth/roles, call services/helpers, and shape JSON output. Wrap async controllers with `asyncHandler` from [src/utils/asyncHandler.js](src/utils/asyncHandler.js) OR use try/catch with `next(error)`
-- **Auth & RBAC**: JWT via [src/services/tokenService.js](src/services/tokenService.js), checked in [src/middleware/auth.js](src/middleware/auth.js). Use `authenticate` then `authorize({ roles, capabilities })` (see [src/config/roles.js](src/config/roles.js)). Borrower queries MUST scope by `req.user`
-- **Validation**: Use `express-validator`. Export validators as arrays (e.g., `exports.validatePushToken = [body('userId').notEmpty(), ...]`) and check `validationResult(req)` in controller. Pass errors to `next(createError(400, { errors: errors.array() }))`
-- **Error handling**: Use `http-errors` package: `createError(statusCode, message)` or `createError(statusCode, { errors: [...] })`. Pass to `next(error)`. Central handler in [src/middleware/error.js](src/middleware/error.js) logs 5xx errors, returns JSON with `{ message, errors?, stack? }`
-- **Logging**: Use [src/utils/logger.js](src/utils/logger.js) (JSON logs, requestId/user context). Call `req.log.info()`, `req.log.error()`, etc. NEVER use `console.log/error/warn/info` (exception: internal logger implementation and env.js startup warnings)
-- **Audit**: Persist with `audit({ action, entityType, entityId, status, metadata }, req)` from [src/utils/audit.js](src/utils/audit.js). NEVER throw on audit failure. Include loanId/posApplicationId where relevant
-- **Uploads**: [src/controllers/documentUploadController.js](src/controllers/documentUploadController.js) → [src/services/azureBlobService.js](src/services/azureBlobService.js). Enforce MIME allowlist (`ALLOWED_MIME_TYPES`), 10MB limit, and borrower/officer access checks before generating presigned URLs
-- **Integrations**: External systems (Encompass, POS, CRM, Optimal Blue, Twilio, etc) are isolated in `src/services` and `src/jobs`. See summaries in [summaries/](summaries/)
-- **Schedulers**: [src/server.js](src/server.js) starts Mongo, then launches jobs in [src/jobs](src/jobs) and [src/schedulers](src/schedulers)
+## Architecture
+- Entry: [src/server.js](src/server.js) → [src/app.js](src/app.js); mounts `/api/v1` via [src/routes/index.js](src/routes/index.js).
+- Domains live under `src/` as controller + route + service modules (auth, loans, documents, POS, CRM, credit, rates, notifications, menu, chatbot).
+- Mongo via Mongoose; no SQL. Swagger served at `/api-docs` using [src/config/swagger.js](src/config/swagger.js).
+- Schedulers start after Mongo: see [src/server.js](src/server.js) and jobs/schedulers for Encompass, CRM, FCRA retention, Optimal Blue rate sync, metrics, rate alerts.
 
-## Controller Pattern (complete example)
-```javascript
+## Conventions
+- Controllers are thin: validate → auth/RBAC → service → JSON. Use `express-validator` and send errors with `http-errors` to central handler.
+- Auth/RBAC: use `authenticate` then `authorize({ roles, capabilities })` from [src/middleware/auth.js](src/middleware/auth.js) with roles in [src/config/roles.js](src/config/roles.js). Borrower queries must filter by `req.user._id`.
+- Logging: use [src/utils/logger.js](src/utils/logger.js). Access `req.log`; do not use `console.*` (ok only inside env warnings).
+- Audit: call `audit({ action, entityType, entityId, status, metadata }, req)` from [src/utils/audit.js](src/utils/audit.js). Never throw on audit failures.
+- Uploads: enforce MIME allowlist and 10MB limits; presign via [src/services/azureBlobService.js](src/services/azureBlobService.js) from [src/controllers/documentUploadController.js](src/controllers/documentUploadController.js).
+- CORS: configured via `CORS_ORIGINS` in [src/config/env.js](src/config/env.js); request tracing sets `X-Request-Id` in [src/app.js](src/app.js).
+
+## Minimal Controller Flow (example)
+```js
+const { validationResult } = require('express-validator');
 const createError = require('http-errors');
-const { body, validationResult } = require('express-validator');
-const Model = require('../models/Model');
-const logger = require('../utils/logger');
-const { audit } = require('../utils/audit');
-
-exports.validateCreate = [
-  body('field').notEmpty().withMessage('field is required'),
-];
-
 exports.create = async (req, res, next) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return next(createError(400, { errors: errors.array() }));
-    }
-    
-    // Business logic
-    const item = await Model.create({ ...req.body, user: req.user._id });
-    
-    // Audit (never throws)
-    await audit({ action: 'model.create', entityType: 'Model', entityId: item._id }, req);
-    
-    req.log.info('Model created', { itemId: item._id });
+    if (!errors.isEmpty()) return next(createError(400, { errors: errors.array() }));
+    const item = await Service.create({ ...req.body, user: req.user._id });
+    await audit({ action: 'item.create', entityType: 'Item', entityId: item._id }, req);
     res.status(201).json({ item });
-  } catch (error) {
-    req.log.error('Error creating model', { error });
-    next(error);
-  }
+  } catch (err) { next(err); }
 };
 ```
 
-## Key Endpoints (examples)
-- `POST /api/v1/auth/login` – login, returns JWT
-- `GET /api/v1/users/me` – current user profile
-- `GET /api/v1/loans` – list loans (borrowers see their own)
-- `POST /api/v1/documents` – upload doc metadata
-- `GET /api/v1/notifications` – list notifications for user
-- See [README.md](README.md) for more
+## Workflows
+- Lint/tests: `npm run lint`, `npm test`, `npm test:unit`, `npm test:integration`, `npm test:watch`.
+- Seeds: `npm run seed:users`, `npm run seed:roles`, `npm run seed:menus`.
+- Node >=18 required; config/telemetry/security/integrations via [src/config/env.js](src/config/env.js).
 
-## Contribution & Extension
-- Register new routes in [src/routes/index.js](src/routes/index.js)
-- Add `authenticate` and `authorize` guards to protected endpoints
-- Align with validation/logging/audit patterns above
-- For borrower-scoped resources, always filter by `req.user._id` and return minimal fields
-- Document new env vars in README and add validation in [src/config/env.js](src/config/env.js)
+## Integration Boundaries
+- External systems isolated in `src/services`, schedulers in `src/jobs`/`src/schedulers`.
+- Route inventory: see [src/routes/index.js](src/routes/index.js) for mounted feature routers.
 
-## Testing & Build
-- Run all tests: `npm test` (includes coverage)
-- Unit only: `npm test:unit` | Integration only: `npm test:integration`
-- Watch mode: `npm test:watch`
-- Node >=18 required
+See [README.md](README.md) and [summaries/](summaries/) for endpoint lists and integration summaries.
 
----
-For more, see [README.md](README.md), [summaries/](summaries/), and [src/config/env.js](src/config/env.js).
+## Feature Example: Menu API
+- Endpoints: see [src/routes/menu.js](src/routes/menu.js): admin `POST /menus/reset`, `GET /menus/versions`, `POST /menus/restore/:version`, `PUT /menus`; user `GET /menus`, `GET /menus/grouped`, admin `GET /menus/roles`.
+- Controller: [src/controllers/menuController.js](src/controllers/menuController.js) enforces `validateMenus`, uses `http-errors`, `audit`, and role validation against [src/config/roles.js](src/config/roles.js) plus `all`.
+- Models: [src/models/Menu.js](src/models/Menu.js) and versioning via [src/models/menuVersion.js](src/models/menuVersion.js).
+- Service: [src/services/menuService.js](src/services/menuService.js) replaces all menus (`deleteMany` + `insertMany`) and sorts by `order` on reads.
+- Seeding: run `npm run seed:menus` to load defaults from [scripts/seedMenus.js](scripts/seedMenus.js). `resetMenus` reads the default `menus` export from that file and creates a new `MenuVersion`.
 

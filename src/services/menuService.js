@@ -1,13 +1,27 @@
-const Menu = require('../models/menu');
+const Menu = require('../models/Menu');
 
+
+// Return all menus, ordered by type then order
 async function getAllMenus() {
-  return Menu.find().sort({ order: 1 }).lean();
+  return Menu.find().sort({
+    type: 1,
+    order: 1
+  }).lean();
 }
 
+// Normalize order within each type, preserve analytics if present
 async function upsertMenus(menus) {
-  // Remove all existing menus, then insert new ones (replace all)
+  // Group by type and sort by order, then reassign order to be 0-based within each type
+  const types = ['drawer', 'tab', 'stack'];
+  let normalized = [];
+  for (const type of types) {
+    const items = menus.filter(m => m.type === type)
+      .sort((a, b) => a.order - b.order)
+      .map((m, idx) => ({ ...m, order: idx }));
+    normalized = normalized.concat(items);
+  }
   await Menu.deleteMany({});
-  return Menu.insertMany(menus);
+  return Menu.insertMany(normalized);
 }
 
 module.exports = {

@@ -10,6 +10,11 @@ const menuSchema = new mongoose.Schema({
   order: { type: Number, required: true },
   visible: { type: Boolean, required: true },
   roles: { type: [String], required: true },
+  analytics: {
+    views: { type: Number },
+    uniqueUsers: { type: Number },
+    lastAccessed: { type: String },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Menu', menuSchema);

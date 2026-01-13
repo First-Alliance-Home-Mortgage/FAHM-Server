@@ -16,14 +16,14 @@ const authenticate = async (req, res, next) => {
   try {
     const payload = jwt.verify(token, jwtSecret);
 
-    req.user = await User.findById(payload.sub).select('-password');
+    req.user = await User.findById(payload.sub).select('-password').populate('role');
 
     if (!req.user) return next(createError(401, 'User not found'));
     if (req.user.isActive === false) return next(createError(403, 'User is inactive'));
     if (req.log && typeof req.log.child === 'function') {
-      req.log = req.log.child({ userId: req.user._id, role: req.user.role });
+      req.log = req.log.child({ userId: req.user._id, role: req.user.role?.name });
     } else {
-      req.log = logger.child({ requestId: req.id, userId: req.user._id, role: req.user.role });
+      req.log = logger.child({ requestId: req.id, userId: req.user._id, role: req.user.role?.name });
     }
     return next();
   } catch (_err) {
@@ -42,11 +42,14 @@ const authorize = (...args) => (req, res, next) => {
   const allowedRoles = opts.roles || [];
   const requiredCapabilities = opts.capabilities || [];
 
-  if (allowedRoles.length && !allowedRoles.includes(req.user.role)) {
+  // Get role name from populated role object or fallback to string comparison
+  const userRoleName = req.user.role?.slug || req.user.role;
+
+  if (allowedRoles.length && !allowedRoles.includes(userRoleName)) {
     return next(createError(403, 'Forbidden'));
   }
 
-  if (requiredCapabilities.length && !requiredCapabilities.some((cap) => hasCapability(req.user.role, cap))) {
+  if (requiredCapabilities.length && !requiredCapabilities.some((cap) => hasCapability(userRoleName, cap))) {
     return next(createError(403, 'Forbidden'));
   }
 

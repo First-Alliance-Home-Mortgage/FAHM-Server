@@ -20,6 +20,7 @@ const personaViewRoutes = require('./personaViews');
 const referralSourceRoutes = require('./referralSources');
 const smsRoutes = require('./sms');
 const rateAlertRoutes = require('./rateAlerts');
+const cmsRoutes = require('./cms');
 
 const menuRoutes = require('./menu');
 const chatbotRoutes = require('./chatbot');
@@ -48,8 +49,9 @@ router.use('/referral-sources', referralSourceRoutes);
 router.use('/sms', smsRoutes);
 router.use('/rate-alerts', rateAlertRoutes);
 router.use('/chatbot', chatbotRoutes);
-
 router.use('/menus', menuRoutes);
+router.use('/roles', require('./role'));
+router.use('/cms', cmsRoutes);
 
 module.exports = router;
 

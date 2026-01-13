@@ -7,31 +7,51 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const { jwtSecret } = require('../../src/config/env');
 
+// Mock Azure Blob uploads to avoid external dependency during tests
+jest.mock('../../src/services/azureBlobService', () => ({
+  uploadFile: jest.fn().mockResolvedValue({ blobUrl: 'https://example.com/test-photo.jpg' }),
+}));
+
 describe('POST /api/v1/users/profile-picture', () => {
   let user;
   let token;
 
   beforeAll(async () => {
-    user = await User.create({
+    // Create a fake user object without hitting the database
+    user = {
+      _id: new mongoose.Types.ObjectId(),
       name: 'Test User',
       email: 'testuser@example.com',
-      password: 'Password123!',
       isActive: true,
+      role: 'borrower',
+      photo: null,
+    };
+
+    // Stub User model methods used by auth and controller
+    jest.spyOn(User, 'findById').mockReturnValue({
+      select: () => Promise.resolve(user),
     });
+    jest
+      .spyOn(User, 'findByIdAndUpdate')
+      .mockImplementation((_id, update) => Promise.resolve({ ...user, photo: update.photo }));
+
     token = jwt.sign({ sub: user._id }, jwtSecret, { expiresIn: '1h' });
   });
 
   afterAll(async () => {
-    await User.deleteMany({ email: 'testuser@example.com' });
-    await mongoose.connection.close();
+    jest.restoreAllMocks();
   });
 
   it('should upload a profile picture and update user', async () => {
-    const imagePath = path.join(__dirname, '../fixtures/test-profile.jpg');
+    const jpegBuffer = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
+      0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+      0x00, 0x01, 0x00, 0x00, 0xff, 0xd9
+    ]);
     const res = await request(app)
       .post('/api/v1/users/profile-picture')
       .set('Authorization', `Bearer ${token}`)
-      .attach('file', imagePath);
+      .attach('file', jpegBuffer, 'test.jpg');
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.photoUrl).toMatch(/^https?:\/\//);
@@ -39,11 +59,11 @@ describe('POST /api/v1/users/profile-picture', () => {
   });
 
   it('should reject non-image files', async () => {
-    const filePath = path.join(__dirname, '../fixtures/test.txt');
+    const txtBuffer = Buffer.from('plain text content', 'utf8');
     const res = await request(app)
       .post('/api/v1/users/profile-picture')
       .set('Authorization', `Bearer ${token}`)
-      .attach('file', filePath);
+      .attach('file', txtBuffer, 'test.txt');
     expect(res.statusCode).toBe(400);
   });
 });

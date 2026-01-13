@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { roles: roleMap, BORROWER } = require('../config/roles');
-const ROLE_VALUES = roleMap ? Object.values(roleMap) : ['borrower'];
 
 const userSchema = new mongoose.Schema(
   {
@@ -9,9 +7,9 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, trim: true },
     role: {
-      type: String,
-      enum: ROLE_VALUES,
-      default: BORROWER || 'borrower',
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Role',
+      required: true,
     },
     password: { type: String, required: true, minlength: 6, select: false },
     azureAdB2CId: { type: String, unique: true, sparse: true, index: true },

@@ -15,7 +15,9 @@
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "seed:users": "node scripts/seedUsers.js",
     "seed:menus": "node scripts/seedMenus.js",
-    "add-user": "node scripts/addUser.js"
+    "seed:cms": "node scripts/seedCms.js",
+    "add-user": "node scripts/addUser.js",
+    "seed:roles": "node scripts/seedRoles.js"
   },
   "engines": {
     "node": ">=18"

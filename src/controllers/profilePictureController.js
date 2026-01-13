@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const azureBlobService = require('../services/azureBlobService');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const { MAX_FILE_SIZE } = require('../middleware/uploadMiddleware');
 // Removed unused variables: validationResult and ALLOWED_MIME_TYPES
 
 /**
@@ -16,13 +17,14 @@ exports.uploadProfilePicture = async (req, res, next) => {
       return next(createError(400, 'No file uploaded'));
     }
     const { mimetype, originalname, buffer, size } = req.file;
-    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(mimetype)) {
-      return next(createError(400, 'Only PNG and JPG images are allowed'));
-    }
     if (size > MAX_FILE_SIZE) {
       return next(createError(400, 'File exceeds 10MB limit'));
     }
     const ext = path.extname(originalname).toLowerCase();
+    const allowedExtensions = ['.png', '.jpg', '.jpeg'];
+    if (!allowedExtensions.includes(ext)) {
+      return next(createError(400, 'Only PNG and JPG images are allowed'));
+    }
     const uniqueFileName = `profile-pictures/${req.user._id}/${uuidv4()}${ext}`;
     const uploadResult = await azureBlobService.uploadFile(uniqueFileName, buffer, mimetype, {
       userId: req.user._id.toString(),

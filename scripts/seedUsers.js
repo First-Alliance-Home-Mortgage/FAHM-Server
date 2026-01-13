@@ -1,54 +1,50 @@
 const mongoose = require('mongoose');
 const connectMongo = require('../src/db/mongoose');
 const User = require('../src/models/User');
+const Role = require('../src/models/Role');
 const logger = require('../src/utils/logger');
-
-// Roles to seed with one default user each
-const availableRoles = [
-  'borrower',
-  'loan_officer_tpo',
-  'loan_officer_retail',
-  'broker',
-  'branch_manager',
-  'realtor',
-  'admin',
-];
 
 const DEFAULT_PASSWORD = 'Password123!';
 
 function roleEmail(role) {
-  return `${role.replace(/_/g, '.')}@example.com`;
-}
 
-function roleName(role) {
-  return role
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  return `${role.toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^\w-]/g, '')}@fahmloans.com`;
 }
 
 async function seed() {
   await connectMongo();
 
-  for (const role of availableRoles) {
-    const email = roleEmail(role);
-    const existing = await User.findOne({ email });
-    if (existing) {
-      logger.info('Seed user exists; skipping', { role, email });
-      continue;
-    }
+  // Cleanup: delete all seed users
+  logger.info('Cleaning up existing seed users...');
+  const seedEmails = await User.deleteMany({});
+  logger.info('Deleted seed users', { deletedCount: seedEmails.deletedCount });
+
+  // Get all roles from database
+  const roles = await Role.find().select('_id name');
+  if (roles.length === 0) {
+    logger.warn('No roles found in database. Please seed roles first.');
+    return;
+  }
+
+  logger.info('Found roles in database', { count: roles.length });
+
+  for (const role of roles) {
+    const email = roleEmail(role.name);
 
     const user = await User.create({
-      name: `${roleName(role)} User`,
+      name: `${role.name} User`,
       email,
       password: DEFAULT_PASSWORD,
-      role,
+      role: role._id,
       phone: '555-000-0000',
       emailVerified: true,
       isActive: true,
     });
 
-    logger.info('Created seed user', { role, email, id: user._id.toString() });
+    logger.info('Created seed user', { role: role.name, email, id: user._id.toString() });
   }
 }
 

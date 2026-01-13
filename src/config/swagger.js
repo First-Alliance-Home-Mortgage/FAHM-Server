@@ -39,6 +39,10 @@ const options = {
       { name: 'Credit Reporting', description: 'Xactus credit reporting integration for tri-merge reports and scoring' },
       { name: 'Rate & Pricing', description: 'Optimal Blue rate sheets, rate locks, and rate alerts' },
       { name: 'Performance Dashboard', description: 'Power BI embedded analytics, KPIs, and performance metrics' },
+      { name: 'CMS Screens', description: 'Dynamic screen definitions and publishing' },
+      { name: 'CMS Navigation', description: 'Role-based navigation configuration' },
+      { name: 'CMS Feature Flags', description: 'Feature flag management for clients' },
+      { name: 'CMS Components', description: 'Component registry and allowed props/actions' },
     ],
     components: {
       securitySchemes: {

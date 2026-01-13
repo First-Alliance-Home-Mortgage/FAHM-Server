@@ -18,18 +18,22 @@ const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req, file, cb) => {
-  // Check MIME type
-  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+  // Validate MIME type first (keep legacy behavior for tests),
+  // but allow missing or 'application/octet-stream' to pass to extension check
+  if (
+    file.mimetype &&
+    file.mimetype !== 'application/octet-stream' &&
+    !ALLOWED_MIME_TYPES.includes(file.mimetype)
+  ) {
     return cb(
       new Error(`Invalid file type. Only PDF, PNG, and JPG files are allowed. Received: ${file.mimetype}`),
       false
     );
   }
 
-  // Check file extension
+  // Then check file extension
   const ext = path.extname(file.originalname).toLowerCase();
   const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg'];
-  
   if (!allowedExtensions.includes(ext)) {
     return cb(
       new Error(`Invalid file extension. Only .pdf, .png, .jpg, and .jpeg files are allowed. Received: ${ext}`),
