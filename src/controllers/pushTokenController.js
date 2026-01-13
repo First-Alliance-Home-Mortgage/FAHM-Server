@@ -14,7 +14,6 @@ exports.registerPushToken = async (req, res, next) => {
     if (!errors.isEmpty()) {
       return next(createError(400, { errors: errors.array() }));
     }
-    console.log('Registering push token with data:', req.body);
     const { userId, expoPushToken } = req.body;
     const user = await User.findByIdAndUpdate(
       userId,

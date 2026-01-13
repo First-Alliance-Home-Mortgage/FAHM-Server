@@ -23,7 +23,7 @@ const log = (level, message, meta = {}) => {
     timestamp: new Date().toISOString(),
   };
 
-  console.log(JSON.stringify(payload));
+  // Structured logging payload (can be piped to external logging service)
 };
 
 const child = (baseMeta = {}) => {

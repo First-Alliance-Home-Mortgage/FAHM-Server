@@ -24,7 +24,6 @@ const authenticate = async (req, res, next) => {
         path: 'role',
         populate: { path: 'capabilities' }
       });
-    console.log(req.user);
     if (!req.user) return next(createError(401, 'User not found'));
     if (req.user.isActive === false) return next(createError(403, 'User is inactive'));
     if (req.log && typeof req.log.child === 'function') {
