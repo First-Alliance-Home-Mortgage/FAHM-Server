@@ -17,9 +17,9 @@ function roleEmail(role) {
 async function seed() {
   await connectMongo();
 
-  // Cleanup: delete all seed users
+  // Cleanup: delete all seed users with @fahmloans.com email
   logger.info('Cleaning up existing seed users...');
-  const seedEmails = await User.deleteMany({});
+  const seedEmails = await User.deleteMany({ email: /@fahmloans\.com$/ });
   logger.info('Deleted seed users', { deletedCount: seedEmails.deletedCount });
 
   // Get all roles from database
