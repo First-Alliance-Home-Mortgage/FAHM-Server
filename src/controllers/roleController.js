@@ -1,4 +1,5 @@
 const Role = require('../models/Role');
+const Capability = require('../models/Capability');
 const createError = require('http-errors');
 
 // GET /roles - list all roles

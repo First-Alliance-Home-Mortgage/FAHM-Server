@@ -2,6 +2,8 @@ const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
 const { jwtSecret } = require('../config/env');
 const User = require('../models/User');
+const Role = require('../models/Role');
+const Capability = require('../models/Capability');
 const { hasCapability } = require('../config/roles');
 const logger = require('../utils/logger');
 
@@ -22,7 +24,7 @@ const authenticate = async (req, res, next) => {
         path: 'role',
         populate: { path: 'capabilities' }
       });
-
+    console.log(req.user);
     if (!req.user) return next(createError(401, 'User not found'));
     if (req.user.isActive === false) return next(createError(403, 'User is inactive'));
     if (req.log && typeof req.log.child === 'function') {
@@ -31,7 +33,8 @@ const authenticate = async (req, res, next) => {
       req.log = logger.child({ requestId: req.id, userId: req.user._id, role: req.user.role?.name });
     }
     return next();
-  } catch (_err) {
+  } catch (err) {
+    logger.error('Authentication error', { error: err.message, stack: err.stack });
     return next(createError(401, 'Invalid token'));
   }
 };
@@ -39,7 +42,7 @@ const authenticate = async (req, res, next) => {
 // Supports legacy signature authorize(roleA, roleB) and an object signature authorize({ roles, capabilities })
 const authorize = (...args) => (req, res, next) => {
   if (!req.user) return next(createError(401, 'Authentication required'));
-  
+
   if (!req.user.role) return next(createError(403, 'User has no role assigned'));
 
   const opts = args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])
