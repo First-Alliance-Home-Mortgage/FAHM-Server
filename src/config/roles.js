@@ -84,9 +84,27 @@ const roleCapabilities = {
   ],
 };
 
-const hasCapability = (role, capability) => {
-  const caps = roleCapabilities[role] || [];
-  return caps.includes(capability);
+const hasCapability = (roleOrRoleObject, capability) => {
+  // Support both legacy string role names and role objects with populated capabilities
+  if (typeof roleOrRoleObject === 'string') {
+    // Legacy: lookup from roleCapabilities map
+    const caps = roleCapabilities[roleOrRoleObject] || [];
+    return caps.includes(capability);
+  }
+  
+  if (roleOrRoleObject && Array.isArray(roleOrRoleObject.capabilities)) {
+    // New: check if capabilities array contains objects (populated) or strings
+    return roleOrRoleObject.capabilities.some(cap => {
+      // If capability is populated (object), check the name field
+      if (typeof cap === 'object' && cap.name) {
+        return cap.name === capability;
+      }
+      // If capability is just a string
+      return cap === capability;
+    });
+  }
+  
+  return false;
 };
 
 module.exports = {

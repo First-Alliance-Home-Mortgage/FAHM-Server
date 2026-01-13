@@ -4,7 +4,9 @@ const createError = require('http-errors');
 // GET /roles - list all roles
 exports.getRoles = async (req, res, next) => {
   try {
-    const roles = await Role.find().sort({ name: 1 });
+    const roles = await Role.find()
+      .populate('capabilities')
+      .sort({ name: 1 });
     res.json(roles);
   } catch (error) {
     next(error);

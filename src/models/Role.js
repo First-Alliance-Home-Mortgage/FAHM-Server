@@ -5,7 +5,8 @@ const roleSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
+    lowercase: true,
   },
   slug: {
     type: String,
@@ -13,6 +14,10 @@ const roleSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
   },
+  capabilities: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Capability',
+  }],
 }, {
   timestamps: true,
 });

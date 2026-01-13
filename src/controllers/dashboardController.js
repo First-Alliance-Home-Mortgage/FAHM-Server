@@ -142,11 +142,14 @@ exports.getMetrics = async (req, res, next) => {
       }
     }
 
+    // Get user's role name from populated role object
+    const userRoleName = req.user.role?.name;
+
     // User-specific or branch/regional based on role
-    if (req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) {
+    if (userRoleName === roles.LO_RETAIL || userRoleName === roles.LO_TPO) {
       query.user = req.user._id;
       query.aggregationLevel = 'user';
-    } else if (req.user.role === roles.BRANCH_MANAGER) {
+    } else if (userRoleName === roles.BRANCH_MANAGER) {
       if (aggregationLevel === 'user') {
         // BM can see individual LO metrics in their branch
         query.branch = req.user.branch;
@@ -155,7 +158,7 @@ exports.getMetrics = async (req, res, next) => {
         query.branch = req.user.branch;
         query.aggregationLevel = 'branch';
       }
-    } else if (req.user.role === roles.ADMIN) {
+    } else if (userRoleName === roles.ADMIN) {
       // Admin can see any aggregation level
       if (aggregationLevel) {
         query.aggregationLevel = aggregationLevel;

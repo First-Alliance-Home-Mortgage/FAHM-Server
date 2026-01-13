@@ -27,7 +27,7 @@ const roles = require('../config/roles');
  *       401:
  *         description: Unauthorized
  */
-router.get('/reports', authenticate, dashboardController.getAvailableReports);
+router.get('/reports', authenticate, authorize({ capabilities: ['dashboard:view'] }), dashboardController.getAvailableReports);
 
 /**
  * @swagger
@@ -118,7 +118,7 @@ router.post(
  *       200:
  *         description: Metrics retrieved successfully
  */
-router.get('/metrics', authenticate, dashboardController.getMetrics);
+router.get('/metrics', authenticate, authorize({ capabilities: ['dashboard:view'] }), dashboardController.getMetrics);
 
 /**
  * @swagger

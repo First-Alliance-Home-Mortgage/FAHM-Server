@@ -16,7 +16,12 @@ const authenticate = async (req, res, next) => {
   try {
     const payload = jwt.verify(token, jwtSecret);
 
-    req.user = await User.findById(payload.sub).select('-password').populate('role');
+    req.user = await User.findById(payload.sub)
+      .select('-password')
+      .populate({
+        path: 'role',
+        populate: { path: 'capabilities' }
+      });
 
     if (!req.user) return next(createError(401, 'User not found'));
     if (req.user.isActive === false) return next(createError(403, 'User is inactive'));
@@ -34,6 +39,8 @@ const authenticate = async (req, res, next) => {
 // Supports legacy signature authorize(roleA, roleB) and an object signature authorize({ roles, capabilities })
 const authorize = (...args) => (req, res, next) => {
   if (!req.user) return next(createError(401, 'Authentication required'));
+  
+  if (!req.user.role) return next(createError(403, 'User has no role assigned'));
 
   const opts = args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])
     ? args[0]
@@ -42,15 +49,22 @@ const authorize = (...args) => (req, res, next) => {
   const allowedRoles = opts.roles || [];
   const requiredCapabilities = opts.capabilities || [];
 
-  // Get role name from populated role object or fallback to string comparison
-  const userRoleName = req.user.role?.slug || req.user.role;
+  // Get role name from populated role object
+  const userRoleName = req.user.role.name;
 
-  if (allowedRoles.length && !allowedRoles.includes(userRoleName)) {
-    return next(createError(403, 'Forbidden'));
+  // Check role-based access
+  if (allowedRoles.length > 0) {
+    if (!allowedRoles.includes(userRoleName)) {
+      return next(createError(403, 'Forbidden'));
+    }
   }
 
-  if (requiredCapabilities.length && !requiredCapabilities.some((cap) => hasCapability(userRoleName, cap))) {
-    return next(createError(403, 'Forbidden'));
+  // Check capability-based access
+  if (requiredCapabilities.length > 0) {
+    const hasAllCapabilities = requiredCapabilities.every((cap) => hasCapability(req.user.role, cap));
+    if (!hasAllCapabilities) {
+      return next(createError(403, 'Insufficient permissions'));
+    }
   }
 
   return next();

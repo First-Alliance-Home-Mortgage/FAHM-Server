@@ -7,7 +7,11 @@ const Role = require('../models/Role');
 exports.me = async (req, res, next) => {
   try {
     if (!req.user) return next(createError(401, 'Authentication required'));
-    const user = await User.findById(req.user._id).populate('role');
+    const user = await User.findById(req.user._id)
+      .populate({
+        path: 'role',
+        populate: { path: 'capabilities' }
+      });
     await audit({ action: 'users.me', entityType: 'User', entityId: req.user._id, status: 'success' }, req);
     res.json({ user });
   } catch (err) {
@@ -35,7 +39,12 @@ exports.updateProfile = async (req, res, next) => {
     for (const key of allowed) {
       if (req.body[key] !== undefined) patch[key] = req.body[key];
     }
-    const updated = await User.findByIdAndUpdate(req.user._id, { $set: patch }, { new: true }).select('+password').populate('role');
+    const updated = await User.findByIdAndUpdate(req.user._id, { $set: patch }, { new: true })
+      .select('+password')
+      .populate({
+        path: 'role',
+        populate: { path: 'capabilities' }
+      });
     if (!updated) return next(createError(404, 'User not found'));
     await audit({ action: 'users.profile.update', entityType: 'User', entityId: req.user._id, status: 'success' }, req);
     res.json({ user: updated });
@@ -74,7 +83,10 @@ exports.createUser = async (req, res, next) => {
       password: req.body.password,
       title: req.body.title,
       branch: req.body.branch,
-    }).then(u => u.populate('role'));
+    }).then(u => u.populate({
+      path: 'role',
+      populate: { path: 'capabilities' }
+    }));
     await audit({ action: 'users.create', entityType: 'User', entityId: user._id, status: 'success' }, req);
     res.status(201).json({ user });
   } catch (err) {
@@ -113,7 +125,10 @@ exports.listUsers = async (req, res, next) => {
     const total = await User.countDocuments(filter);
     const users = await User.find(filter)
       .select('-password')
-      .populate('role')
+      .populate({
+        path: 'role',
+        populate: { path: 'capabilities' }
+      })
       .sort(sort)
       .skip(skip)
       .limit(limit);
@@ -128,12 +143,17 @@ exports.validateUserId = [param('id').isString().trim().notEmpty()];
 
 exports.getUserById = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password').populate('role');
+    const user = await User.findById(req.params.id).select('-password').select('-password')
+      .populate({
+        path: 'role',
+        populate: { path: 'capabilities' }
+      });
     if (!user) return next(createError(404, 'User not found'));
     res.json({ user });
   } catch (err) {
     req.log && req.log.error('Failed to get user', { error: err });
     next(err);
+
   }
 };
 
@@ -159,7 +179,12 @@ exports.updateUser = async (req, res, next) => {
       const roleExists = await Role.findById(patch.role);
       if (!roleExists) return next(createError(400, 'Invalid role'));
     }
-    const updated = await User.findByIdAndUpdate(req.params.id, { $set: patch }, { new: true }).select('-password').populate('role');
+    const updated = await User.findByIdAndUpdate(req.params.id, { $set: patch }, { new: true })
+      .select('-password')
+      .populate({
+        path: 'role',
+        populate: { path: 'capabilities' }
+      });
     if (!updated) return next(createError(404, 'User not found'));
     await audit({ action: 'users.update', entityType: 'User', entityId: req.params.id, status: 'success' }, req);
     res.json({ user: updated });
