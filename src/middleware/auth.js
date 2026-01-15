@@ -2,8 +2,6 @@ const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
 const { jwtSecret } = require('../config/env');
 const User = require('../models/User');
-const Role = require('../models/Role');
-const Capability = require('../models/Capability');
 const { hasCapability } = require('../config/roles');
 const logger = require('../utils/logger');
 
@@ -38,33 +36,29 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Supports legacy signature authorize(roleA, roleB) and an object signature authorize({ roles, capabilities })
-const authorize = (...args) => (req, res, next) => {
+// Authorize using role/capabilities from the database only
+const authorize = (options = {}) => (req, res, next) => {
+
   if (!req.user) return next(createError(401, 'Authentication required'));
-
   if (!req.user.role) return next(createError(403, 'User has no role assigned'));
+  const allowedRoles = options.roles || [];
+  const requiredCapabilities = options.capabilities || [];
 
-  const opts = args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])
-    ? args[0]
-    : { roles: args };
+  // Always use the populated role object from DB
+  const userRoleName = req.user.role.slug;
 
-  const allowedRoles = opts.roles || [];
-  const requiredCapabilities = opts.capabilities || [];
-
-  // Get role name from populated role object
-  const userRoleName = req.user.role.name;
-
-  // Check role-based access
+  // Role-based access (if specified)
   if (allowedRoles.length > 0) {
-    if (!allowedRoles.includes(userRoleName)) {
+    const allowed = allowedRoles.map(r => r.toLowerCase());
+    if (!allowed.includes(userRoleName)) {
       return next(createError(403, 'Forbidden'));
     }
   }
 
-  // Check capability-based access
+  // Capability-based access (if specified)
   if (requiredCapabilities.length > 0) {
-    const hasAllCapabilities = requiredCapabilities.every((cap) => hasCapability(req.user.role, cap));
-    if (!hasAllCapabilities) {
+    const hasAll = requiredCapabilities.every((cap) => hasCapability(req.user.role, cap));
+    if (!hasAll) {
       return next(createError(403, 'Insufficient permissions'));
     }
   }

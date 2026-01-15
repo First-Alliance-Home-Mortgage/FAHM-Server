@@ -53,6 +53,7 @@ router.use('/menus', menuRoutes);
 router.use('/roles', require('./role'));
 router.use('/capabilities', require('./capability'));
 router.use('/cms', cmsRoutes);
+router.use('/audit-logs', require('./auditLogs'));
 
 module.exports = router;
 

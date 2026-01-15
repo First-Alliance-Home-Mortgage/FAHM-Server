@@ -4,7 +4,6 @@ const router = express.Router();
 // Removed unused 'query' import
 const dashboardController = require('../controllers/dashboardController');
 const { authenticate, authorize } = require('../middleware/auth');
-const roles = require('../config/roles');
 
 /**
  * @swagger
@@ -75,7 +74,7 @@ router.get('/reports/:reportId/embed', authenticate, dashboardController.getRepo
 router.post(
   '/reports/:reportId/refresh',
   authenticate,
-  authorize(roles.ADMIN, roles.BRANCH_MANAGER),
+  authorize('admin', 'branch_manager'),
   dashboardController.refreshReport
 );
 
@@ -183,7 +182,7 @@ router.get('/my-kpis', authenticate, dashboardController.getMyKPIs);
 router.get(
   '/branch-performance',
   authenticate,
-  authorize(roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize('branch_manager', 'admin'),
   dashboardController.getBranchPerformance
 );
 
@@ -221,7 +220,7 @@ router.get(
 router.get(
   '/regional-performance',
   authenticate,
-  authorize(roles.ADMIN),
+  authorize({ roles: ['admin'] }),
   dashboardController.getRegionalPerformance
 );
 

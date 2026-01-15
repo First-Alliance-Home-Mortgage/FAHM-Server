@@ -382,9 +382,6 @@ exports.refreshReport = async (req, res, next) => {
  */
 exports.getRegionalPerformance = async (req, res, next) => {
   try {
-    if (req.user.role !== roles.ADMIN) {
-      return next(createError(403, 'Access denied to regional performance data'));
-    }
 
     const { periodType = 'monthly', startDate, endDate } = req.query;
 
