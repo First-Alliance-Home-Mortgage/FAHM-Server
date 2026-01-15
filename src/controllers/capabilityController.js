@@ -65,7 +65,7 @@ exports.createCapability = async (req, res, next) => {
     if (!errors.isEmpty()) {
       return next(createError(400, { errors: errors.array() }));
     }
-    
+
     const { name, description, category } = req.body;
     
     if (!name) {

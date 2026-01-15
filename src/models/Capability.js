@@ -19,7 +19,7 @@ const capabilitySchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['loan', 'document', 'rates', 'alerts', 'messages', 'dashboard', 'webhooks', 'users', 'audit', 'other'],
+    enum: ['loan', 'document', 'rates', 'alerts', 'messages', 'dashboard', 'webhooks', 'users', 'audit', 'log', 'other'],
     default: 'other',
   },
 }, {

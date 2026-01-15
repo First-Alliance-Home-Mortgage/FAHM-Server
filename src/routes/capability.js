@@ -18,7 +18,7 @@ const validateCapability = [
     .withMessage('Description must not exceed 500 characters'),
   body('category')
     .optional()
-    .isIn(['loan', 'document', 'rates', 'alerts', 'messages', 'dashboard', 'webhooks', 'users', 'audit', 'other'])
+    .isIn(['loan', 'document', 'rates', 'alerts', 'messages', 'dashboard', 'webhooks', 'users', 'audit', 'log', 'other'])
     .withMessage('Invalid category')
 ];
 
