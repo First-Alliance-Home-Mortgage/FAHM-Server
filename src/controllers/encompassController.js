@@ -8,6 +8,17 @@ const encompassService = require('../services/encompassService');
 const logger = require('../utils/logger');
 const roles = require('../config/roles');
 
+exports.encompassToken = async (req, res, next) => {
+  try {
+    // const status = await encompassService.getStatus();
+    const accessToken = await encompassService.getAccessToken();
+    return res.json({ accessToken });
+  } catch (err) {
+    logger.error('Failed to fetch Encompass access token', { error: err.message });
+    return next(err);
+  }
+};
+
 /**
  * Sync loan data from Encompass
  */

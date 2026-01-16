@@ -9,7 +9,7 @@ const { integrations } = require('../config/env');
 
 class EncompassService {
   constructor() {
-    this.baseUrl = integrations.encompass || 'https://api.encompass.example.com';
+    this.baseUrl = integrations.encompass || 'https://api.elliemae.com';
     this.accessToken = null;
     this.tokenExpiry = null;
   }
@@ -24,21 +24,48 @@ class EncompassService {
     }
 
     try {
-      // TODO: Implement actual OAuth flow with client credentials
-      // This is a placeholder for the authentication endpoint
-      const response = await axios.post(`${this.baseUrl}/oauth2/v1/token`, {
-        grant_type: 'client_credentials',
-        client_id: process.env.ENCOMPASS_CLIENT_ID,
-        client_secret: process.env.ENCOMPASS_CLIENT_SECRET,
-      });
+      const clientId = process.env.ENCOMPASS_CLIENT_ID;
+      const clientSecret = process.env.ENCOMPASS_CLIENT_SECRET;
+      const instanceId = process.env.ENCOMPASS_INSTANCE_ID;
+      if (!clientId || !clientSecret || !instanceId) {
+        throw new Error('Missing Encompass OAuth credentials or instance ID');
+      }
+      const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('instance_id', instanceId);
+      params.append('scope', 'lp');
+
+      const response = await axios.post(
+        `${this.baseUrl}/oauth2/v1/token`,
+        params,
+        {
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
 
       this.accessToken = response.data.access_token;
       this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
-
       return this.accessToken;
     } catch (err) {
       logger.error('Failed to get Encompass access token', { error: err.message });
       throw new Error('Encompass authentication failed');
+    }
+  }
+
+  async getStatus() {
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get(`${this.baseUrl}/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (err) {
+      logger.error('Failed to fetch Encompass status', { error: err.message });
+      throw err;
     }
   }
 

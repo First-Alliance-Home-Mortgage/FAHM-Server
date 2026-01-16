@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.use(authenticate);
 
+router.get('/encompassToken', encompassController.encompassToken);
 /**
  * @swagger
  * /encompass/loans/{id}/sync:

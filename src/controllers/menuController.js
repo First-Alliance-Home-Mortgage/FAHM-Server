@@ -35,17 +35,10 @@ exports.getMenuRoles = (req, res) => {
   // Return all role values as an array
   res.json(Object.values(rolesMap));
 };
-// Validation array for PUT /menus
+// Validation array for PUT /menus (MenuConfig: key-value)
 exports.validateMenus = [
-  body().isArray().withMessage('Body must be an array'),
-  body('*.id').notEmpty().withMessage('id is required'),
-  body('*.label').notEmpty().withMessage('label is required'),
-  body('*.icon').notEmpty().withMessage('icon is required'),
-  body('*.route').notEmpty().withMessage('route is required'),
-  body('*.type').isIn(['drawer', 'tab', 'stack']).withMessage('type must be drawer, tab, or stack'),
-  body('*.order').isInt().withMessage('order must be an integer'),
-  body('*.visible').isBoolean().withMessage('visible must be boolean'),
-  body('*.roles').isArray().withMessage('roles must be an array'),
+  body('key').notEmpty().withMessage('key is required'),
+  body('value').not().isEmpty().withMessage('value is required'),
 ];
 
 exports.getMenus = async (req, res, next) => {
@@ -124,48 +117,18 @@ exports.restoreMenuVersion = async (req, res, next) => {
 exports.putMenus = async (req, res, next) => {
   try {
     const errors = validationResult(req);
-
     if (!errors.isEmpty()) {
+      req.log.error('Validation errors in PUT /menus', { errors: errors.array(), body: req.body });
       return next(createError(400, { errors: errors.array() }));
     }
     const menus = req.body;
+    console.log('Menus to update:', menus);
+    await menuService.upsertMenuConfig(menus);
 
-    // Check for unique ids
-    const ids = menus.map(m => m.id);
-    if (new Set(ids).size !== ids.length) {
-      return next(createError(400, 'Menu ids must be unique'));
-    }
-    // Validate roles against allowed roles
-    const { roles: rolesMap } = require('../config/roles');
-    const allowedRoles = new Set(Object.values(rolesMap).concat('all'));
-    const invalidRoles = [];
-    for (const menu of menus) {
-      for (const role of menu.roles) {
-        if (!allowedRoles.has(role)) {
-          invalidRoles.push({ menuId: menu.id, role });
-        }
-      }
-    }
-    if (invalidRoles.length > 0) {
-      req.log.warn('Invalid roles in menu config', { invalidRoles });
-      return next(createError(400, { message: 'Unknown roles found in menu config', invalidRoles }));
-    }
-    const updatedMenus = await menuService.upsertMenus(menus);
-    // Versioning: save a MenuVersion document
-    const MenuVersion = require('../models/menuVersion');
-    const lastVersion = await MenuVersion.findOne().sort({ version: -1 });
-    const newVersion = new MenuVersion({
-      version: lastVersion ? lastVersion.version + 1 : 1,
-      menus: updatedMenus,
-      createdBy: req.user?._id,
-      comment: req.body._comment || undefined,
-    });
-    await newVersion.save();
-    await audit({ action: 'menus.update', entityType: 'Menu', status: 'success' }, req);
-    req.log.info('Menus updated');
-    res.json(updatedMenus);
+    res.json({ success: true, message: 'Menu configuration updated successfully' });
+
   } catch (error) {
-    req.log.error('Error updating menus', { error });
+    req.log.error('Error updating menus', { error, body: req.body });
     next(error);
   }
 };

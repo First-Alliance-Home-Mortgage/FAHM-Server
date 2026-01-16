@@ -9,6 +9,14 @@ async function getAllMenus() {
   }).lean();
 }
 
+async function upsertMenuConfig(menus) {
+  const MenuConfig = require('../models/MenuConfig');
+  const filter = { key: 'menuConfig' };
+  const update = { value: menus };
+  const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+  return MenuConfig.findOneAndUpdate(filter, update, options);
+}
+
 // Normalize order within each type, preserve analytics if present
 async function upsertMenus(menus) {
   // Group by type and sort by order, then reassign order to be 0-based within each type
@@ -27,4 +35,5 @@ async function upsertMenus(menus) {
 module.exports = {
   getAllMenus,
   upsertMenus,
+  upsertMenuConfig
 };
