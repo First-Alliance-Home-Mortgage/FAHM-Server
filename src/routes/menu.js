@@ -9,7 +9,8 @@ router.post('/reset', authenticate, authorize({ roles: ['admin'] }), menuControl
 router.get('/roles', authenticate, authorize({ roles: ['admin'] }), menuController.getMenuRoles);
 // GET /menus - any authenticated user
 router.get('/', authenticate, menuController.getMenus);
-
+// Get /menu configuration
+router.get('/config', authenticate, menuController.getMenuConfig);
 // GET /menus/grouped - any authenticated user
 router.get('/grouped', authenticate, menuController.getGroupedMenus);
 

@@ -114,6 +114,20 @@ exports.restoreMenuVersion = async (req, res, next) => {
   }
 };
 
+exports.getMenuConfig = async (req, res, next) => {
+  try {
+    const MenuConfig = require('../models/MenuConfig');
+    const config = await MenuConfig.findOne({ key: 'menuConfig' }).lean();
+    if (!config) {
+      return res.status(404).json({ message: 'Menu configuration not found' });
+    }
+    res.json(config.value);
+  } catch (error) {
+    req.log.error('Error fetching menu configuration', { error });
+    next(error);
+  }
+};
+
 exports.putMenus = async (req, res, next) => {
   try {
     const errors = validationResult(req);
