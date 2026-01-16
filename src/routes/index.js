@@ -23,6 +23,8 @@ const rateAlertRoutes = require('./rateAlerts');
 const cmsRoutes = require('./cms');
 
 const menuRoutes = require('./menu');
+
+const messagesRoutes = require('./messages');
 const chatbotRoutes = require('./chatbot');
 
 const router = express.Router();
@@ -38,6 +40,7 @@ router.use('/pos-link', posLinkRoutes);
 router.use('/calculator', calculatorRoutes);
 router.use('/encompass', encompassRoutes);
 router.use('/crm', crmRoutes);
+router.use('/messages', messagesRoutes);
 router.use('/credit', creditRoutes);
 router.use('/rates', rateRoutes);
 router.use('/dashboard', dashboardRoutes);

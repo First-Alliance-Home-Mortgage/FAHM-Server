@@ -18,7 +18,8 @@
     "add-user": "node scripts/addUser.js",
     "seed:capabilities": "node scripts/seedCapabilities.js",
     "seed:roles": "node scripts/seedRoles.js",
-    "seed:users": "node scripts/seedUsers.js"
+    "seed:users": "node scripts/seedUsers.js",
+    "seed:messages": "node scripts/seedMessages.js"
   },
   "engines": {
     "node": ">=18"
