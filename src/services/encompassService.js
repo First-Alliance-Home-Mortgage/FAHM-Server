@@ -19,10 +19,10 @@ class EncompassService {
    * In production, implement OAuth 2.0 flow
    */
   async getAccessToken() {
+    // Use cached token if valid
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
       return this.accessToken;
     }
-
     try {
       const clientId = process.env.ENCOMPASS_CLIENT_ID;
       const clientSecret = process.env.ENCOMPASS_CLIENT_SECRET;

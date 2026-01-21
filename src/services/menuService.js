@@ -1,5 +1,5 @@
 const Menu = require('../models/Menu');
-
+const MenuConfig = require('../models/MenuConfig');
 
 // Return all menus, ordered by type then order
 async function getAllMenus() {
@@ -10,7 +10,6 @@ async function getAllMenus() {
 }
 
 async function upsertMenuConfig(menus) {
-  const MenuConfig = require('../models/MenuConfig');
   const filter = { key: 'menuConfig' };
   const update = { value: menus };
   const options = { upsert: true, new: true, setDefaultsOnInsert: true };

@@ -35,10 +35,11 @@ exports.getMenuRoles = (req, res) => {
   // Return all role values as an array
   res.json(Object.values(rolesMap));
 };
-// Validation array for PUT /menus (MenuConfig: key-value)
+// Validation array for PUT /menus (expects array of menu objects)
 exports.validateMenus = [
-  body('key').notEmpty().withMessage('key is required'),
-  body('value').not().isEmpty().withMessage('value is required'),
+  body().isArray({ min: 1 }).withMessage('Request body must be a non-empty array'),
+  body('*.key').notEmpty().withMessage('key is required'),
+  body('*.value').not().isEmpty().withMessage('value is required'),
 ];
 
 exports.getMenus = async (req, res, next) => {
@@ -52,7 +53,7 @@ exports.getMenus = async (req, res, next) => {
 };
 
 // GET /menus/grouped - get menus grouped by role and route type
-exports.getGroupedMenus = async (req, res, next) => {
+exports.getGroupedMenus = async (req, res, _next) => {
   try {
     const menus = await menuService.getAllMenus();
     const grouped = { drawer: [], tab: [], stack: [] };
@@ -130,17 +131,9 @@ exports.getMenuConfig = async (req, res, next) => {
 
 exports.putMenus = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      req.log.error('Validation errors in PUT /menus', { errors: errors.array(), body: req.body });
-      return next(createError(400, { errors: errors.array() }));
-    }
     const menus = req.body;
-    console.log('Menus to update:', menus);
     await menuService.upsertMenuConfig(menus);
-
     res.json({ success: true, message: 'Menu configuration updated successfully' });
-
   } catch (error) {
     req.log.error('Error updating menus', { error, body: req.body });
     next(error);
