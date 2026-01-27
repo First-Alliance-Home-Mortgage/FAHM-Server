@@ -53,6 +53,7 @@ router.use('/sms', smsRoutes);
 router.use('/rate-alerts', rateAlertRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/menus', menuRoutes);
+router.use('/menu-config', require('./menuConfig'));
 router.use('/roles', require('./role'));
 router.use('/capabilities', require('./capability'));
 router.use('/cms', cmsRoutes);

@@ -9,8 +9,7 @@ router.post('/reset', authenticate, authorize({ roles: ['admin'] }), menuControl
 router.get('/roles', authenticate, authorize({ roles: ['admin'] }), menuController.getMenuRoles);
 // GET /menus - any authenticated user
 router.get('/', authenticate, menuController.getMenus);
-// Get /menu configuration
-router.get('/config', authenticate, menuController.getMenuConfig);
+
 // GET /menus/grouped - any authenticated user
 router.get('/grouped', authenticate, menuController.getGroupedMenus);
 
@@ -19,14 +18,5 @@ router.get('/versions', authenticate, authorize({ roles: ['admin'] }), menuContr
 
 // POST /menus/restore/:version - admin only
 router.post('/restore/:version', authenticate, authorize({ roles: ['admin'] }), menuController.restoreMenuVersion);
-
-// PUT /menus - admin only
-router.put(
-  '/',
-  authenticate,
-  authorize({ roles: ['admin'] }),
-  menuController.validateMenus,
-  menuController.putMenus
-);
 
 module.exports = router;
