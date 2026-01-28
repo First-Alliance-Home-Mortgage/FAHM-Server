@@ -36,11 +36,18 @@ exports.getMenuRoles = (req, res) => {
   res.json(Object.values(rolesMap));
 };
 // Validation array for PUT /menus (expects array of menu objects)
-exports.validateMenus = [
-  body().isArray({ min: 1 }).withMessage('Request body must be a non-empty array'),
-  body('*.key').notEmpty().withMessage('key is required'),
-  body('*.value').not().isEmpty().withMessage('value is required'),
+exports.validateMenu = [
+  body('alias').isString().withMessage('Menu alias must be a string'),
+  body('label').isString().withMessage('Menu label must be a string'),
+  body('icon').isString().withMessage('Menu icon must be a string'),
+  body('route').isString().withMessage('Menu route must be a string'),
+  body('type').isIn(['drawer', 'tab', 'stack']).withMessage('Menu type must be one of drawer, tab, or stack'),
+  body('slug').isString().withMessage('Menu slug must be a string'),
+  body('order').isInt({ min: 0 }).withMessage('Menu order must be a non-negative integer'),
+  body('visible').isBoolean().withMessage('Menu visible must be a boolean'),
+  body('roles').isArray().withMessage('Menu roles must be an array of role strings'),
 ];
+// GET /menus - get all menus
 
 exports.getMenus = async (req, res, next) => {
   try {
@@ -48,6 +55,57 @@ exports.getMenus = async (req, res, next) => {
     res.json(menus);
   } catch (error) {
     req.log.error('Error fetching menus', { error });
+    next(error);
+  }
+};
+
+exports.createMenu = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    console.log(errors);
+    console.log(req.body);
+
+    if (!errors.isEmpty()) {
+      return next(createError(400, 'Validation failed', { errors: errors.array() }));
+    }
+    const menuData = req.body;
+    const newMenu = await menuService.createMenu(menuData);
+    req.log.info('Menu created', { menuId: newMenu._id });
+    res.status(201).json(newMenu);
+  } catch (error) {
+    req.log.error('Error creating menu', { error, body: req.body });
+    next(error);
+  }
+};
+
+exports.updateMenu = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+        console.log(errors);
+    console.log(req.body);
+    if (!errors.isEmpty()) {
+      return next(createError(400, 'Validation failed', { errors: errors.array() }));
+    }
+    const menuId = req.params.id;
+    const menuData = req.body;
+    const updatedMenu = await menuService.updateMenu(menuId, menuData);
+    if (!updatedMenu) {
+      return next(createError(404, 'Menu not found'));
+    }
+    req.log.info('Menu updated', { menuId: updatedMenu._id });
+    res.json(updatedMenu);
+  } catch (error) {
+    req.log.error('Error updating menu', { error, body: req.body });
+    next(error);
+  }
+};
+
+exports.getMenuById = async (req, res, next) => {
+  try {
+    const menu = await menuService.getMenuById(req.params.id);
+    res.json(menu);
+  } catch (error) {
+    req.log.error('Error fetching menu by ID', { error });
     next(error);
   }
 };

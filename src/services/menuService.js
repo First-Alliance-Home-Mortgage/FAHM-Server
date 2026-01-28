@@ -9,6 +9,10 @@ async function getAllMenus() {
   }).lean();
 }
 
+async function getMenuById(menuId) {
+  return Menu.findById(menuId).lean();
+}
+
 async function upsertMenuConfig(menus) {
   const filter = { key: 'menuConfig' };
   const update = { value: menus };
@@ -31,8 +35,15 @@ async function upsertMenus(menus) {
   return Menu.insertMany(normalized);
 }
 
+
+// Update a menu by ID
+async function updateMenu(menuId, menuData) {
+  return Menu.findByIdAndUpdate(menuId, menuData, { new: true, runValidators: true });
+}
+
 module.exports = {
   getAllMenus,
   upsertMenus,
-  upsertMenuConfig
+  getMenuById,
+  updateMenu
 };

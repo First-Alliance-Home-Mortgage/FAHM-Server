@@ -10,6 +10,7 @@ const menuSchema = new mongoose.Schema({
   content: { type: mongoose.Schema.Types.Mixed, default: null },
   order: { type: Number, required: true },
   visible: { type: Boolean, required: true },
+  override: { type: Boolean, default: false },
   roles: { type: [String], required: true },
   analytics: {
     views: { type: Number },
