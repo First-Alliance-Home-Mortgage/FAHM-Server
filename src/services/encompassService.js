@@ -184,6 +184,70 @@ class EncompassService {
   }
 
   /**
+   * Get documents from Encompass
+   */
+  async getDocuments(encompassLoanId) {
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get(
+        `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/attachments`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      return this.transformDocuments(response.data);
+    } catch (err) {
+      logger.error('Failed to fetch Encompass documents', {
+        loanId: encompassLoanId,
+        error: err.message,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Download a specific document from Encompass
+   */
+  async downloadDocument(encompassLoanId, attachmentId) {
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get(
+        `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/attachments/${attachmentId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'arraybuffer',
+        }
+      );
+
+      return {
+        data: response.data,
+        contentType: response.headers['content-type'],
+        filename: response.headers['content-disposition']?.match(/filename="?(.+)"?/)?.[1],
+      };
+    } catch (err) {
+      logger.error('Failed to download Encompass document', {
+        loanId: encompassLoanId,
+        attachmentId,
+        error: err.message,
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Verify webhook signature from Encompass
+   */
+  verifyWebhookSignature(payload, signature, secret) {
+    const crypto = require('crypto');
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(JSON.stringify(payload))
+      .digest('hex');
+    return signature === expectedSignature;
+  }
+
+  /**
    * Send message/note to Encompass
    */
   async sendMessage(encompassLoanId, message) {
@@ -237,6 +301,24 @@ class EncompassService {
       phone: c.phone || c.cellPhone,
       encompassId: c.id || c.userId,
       isPrimary: c.isPrimary || false,
+    }));
+  }
+
+  /**
+   * Transform Encompass documents to FAHM format
+   */
+  transformDocuments(encompassDocuments) {
+    if (!Array.isArray(encompassDocuments)) return [];
+
+    return encompassDocuments.map((doc) => ({
+      id: doc.attachmentId || doc.id,
+      title: doc.title || doc.name,
+      documentType: doc.documentType || doc.type || 'other',
+      mimeType: doc.mediaType || doc.mimeType,
+      size: doc.fileSize || doc.size,
+      createdAt: doc.dateCreated || doc.createdAt,
+      createdBy: doc.createdByName || doc.createdBy,
+      isActive: doc.isActive !== false,
     }));
   }
 

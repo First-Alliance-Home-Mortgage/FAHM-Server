@@ -1,7 +1,10 @@
+
 const express = require('express');
 const router = express.Router();
 const menuController = require('../controllers/menuController');
 const { authenticate, authorize } = require('../middleware/auth');
+// DELETE /menus/:id - admin only
+router.delete('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.deleteMenu);
 
 // GET /menus/roles - admin only
 router.get('/roles', authenticate, authorize({ roles: ['admin'] }), menuController.getMenuRoles);

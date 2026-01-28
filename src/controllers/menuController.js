@@ -1,4 +1,5 @@
 
+
 const createError = require('http-errors');
 const { body, validationResult } = require('express-validator');
 const menuService = require('../services/menuService');
@@ -140,7 +141,21 @@ exports.getMenuVersions = async (req, res, next) => {
     next(error);
   }
 };
-
+// DELETE /menus/:id - admin only
+exports.deleteMenu = async (req, res, next) => {
+  try {
+    const menuId = req.params.id;
+    const deletedMenu = await menuService.deleteMenu(menuId);
+    if (!deletedMenu) {
+      return next(createError(404, 'Menu not found'));
+    }
+    req.log.info('Menu deleted', { menuId });
+    res.json({ success: true });
+  } catch (error) {
+    req.log.error('Error deleting menu', { error, menuId: req.params.id });
+    next(error);
+  }
+};
 // POST /menus/restore/:version - restore a previous menu version
 exports.restoreMenuVersion = async (req, res, next) => {
   try {

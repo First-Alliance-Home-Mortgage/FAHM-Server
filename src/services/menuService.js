@@ -1,5 +1,4 @@
 const Menu = require('../models/Menu');
-const MenuConfig = require('../models/MenuConfig');
 
 // Return all menus, ordered by type then order
 async function getAllMenus() {
@@ -11,13 +10,6 @@ async function getAllMenus() {
 
 async function getMenuById(menuId) {
   return Menu.findById(menuId).lean();
-}
-
-async function upsertMenuConfig(menus) {
-  const filter = { key: 'menuConfig' };
-  const update = { value: menus };
-  const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-  return MenuConfig.findOneAndUpdate(filter, update, options);
 }
 
 // Normalize order within each type, preserve analytics if present
@@ -41,9 +33,15 @@ async function updateMenu(menuId, menuData) {
   return Menu.findByIdAndUpdate(menuId, menuData, { new: true, runValidators: true });
 }
 
+// Delete a menu by ID
+async function deleteMenu(menuId) {
+  return Menu.findByIdAndDelete(menuId);
+}
+
 module.exports = {
   getAllMenus,
   upsertMenus,
   getMenuById,
-  updateMenu
+  updateMenu,
+  deleteMenu
 };
