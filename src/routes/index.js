@@ -1,4 +1,5 @@
 const express = require('express');
+
 const authRoutes = require('./auth');
 const loanRoutes = require('./loans');
 const documentRoutes = require('./documents');
@@ -21,13 +22,13 @@ const referralSourceRoutes = require('./referralSources');
 const smsRoutes = require('./sms');
 const rateAlertRoutes = require('./rateAlerts');
 const cmsRoutes = require('./cms');
-
 const menuRoutes = require('./menu');
-
 const messagesRoutes = require('./messages');
 const chatbotRoutes = require('./chatbot');
 
-const router = express.Router();
+const contentUpdatesRouter = require('./contentUpdates');
+
+const router = express.Router(); 
 
 router.use('/auth', authRoutes);
 router.use('/loans', loanRoutes);
@@ -58,6 +59,9 @@ router.use('/roles', require('./role'));
 router.use('/capabilities', require('./capability'));
 router.use('/cms', cmsRoutes);
 router.use('/audit-logs', require('./auditLogs'));
+
+// Content update notification endpoints (WebSocket broadcasts)
+router.use('/content-updates', contentUpdatesRouter);
 
 module.exports = router;
 

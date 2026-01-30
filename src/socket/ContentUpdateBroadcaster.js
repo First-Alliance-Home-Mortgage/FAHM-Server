@@ -33,7 +33,6 @@ class ContentUpdateBroadcaster {
   attach(server) {
     this.wss = new WebSocketServer({ noServer: true });
 
-    // Handle HTTP upgrade requests on /ws/content
     server.on('upgrade', async (request, socket, head) => {
       const { pathname, query } = url.parse(request.url || '', true);
 
@@ -42,7 +41,6 @@ class ContentUpdateBroadcaster {
         return;
       }
 
-      // Authenticate via query param token
       const token = query.token;
       let authPayload = null;
 
@@ -65,7 +63,6 @@ class ContentUpdateBroadcaster {
       });
     });
 
-    // Handle new connections
     this.wss.on('connection', (ws, _req, auth) => {
       const client = {
         ws,
@@ -78,9 +75,7 @@ class ContentUpdateBroadcaster {
       this.clients.add(client);
       console.log(`[WS] Client connected: ${auth.userId} (${this.clients.size} total)`);
 
-      ws.on('pong', () => {
-        client.isAlive = true;
-      });
+      ws.on('pong', () => { client.isAlive = true; });
 
       ws.on('close', () => {
         this.clients.delete(client);
@@ -126,7 +121,6 @@ class ContentUpdateBroadcaster {
 
     for (const client of this.clients) {
       if (client.ws.readyState !== WebSocket.OPEN) continue;
-
       const hasRole = client.roles && client.roles.some((r) => roles.includes(r));
       if (hasRole) {
         client.ws.send(message);
@@ -137,33 +131,21 @@ class ContentUpdateBroadcaster {
     console.log(`[WS] Broadcast "${event.type}" to ${sent} clients (roles: ${roles.join(', ')})`);
   }
 
-  /**
-   * Get the number of currently connected clients.
-   * @returns {number}
-   */
+  /** @returns {number} */
   get connectedCount() {
     return this.clients.size;
   }
 
-  /**
-   * Gracefully shut down the WebSocket server.
-   */
   shutdown() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
-
     for (const client of this.clients) {
       client.ws.close(1001, 'Server shutting down');
     }
     this.clients.clear();
-
-    if (this.wss) {
-      this.wss.close();
-      this.wss = null;
-    }
-
+    if (this.wss) { this.wss.close(); this.wss = null; }
     console.log('[WS] ContentUpdateBroadcaster shut down');
   }
 
@@ -171,11 +153,7 @@ class ContentUpdateBroadcaster {
   _startHeartbeat() {
     this.heartbeatInterval = setInterval(() => {
       for (const client of this.clients) {
-        if (!client.isAlive) {
-          client.ws.terminate();
-          this.clients.delete(client);
-          continue;
-        }
+        if (!client.isAlive) { client.ws.terminate(); this.clients.delete(client); continue; }
         client.isAlive = false;
         client.ws.ping();
       }

@@ -9,7 +9,7 @@ const { startFCRARetentionScheduler } = require('./jobs/fcraRetentionJob');
 const { startRateSyncScheduler } = require('./jobs/rateSyncJob');
 const { startMetricsAggregationScheduler } = require('./jobs/metricsAggregationJob');
 const rateAlertScheduler = require('./schedulers/rateAlertScheduler');
-const { contentBroadcaster } = require('./socket/index');
+const { contentBroadcaster } = require('./socket');
 
 
 const server = http.createServer(app);

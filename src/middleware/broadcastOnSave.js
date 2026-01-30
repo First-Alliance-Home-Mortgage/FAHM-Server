@@ -1,36 +1,28 @@
 /**
  * Express Middleware: Auto-broadcast on content save
  *
- * Attaches to existing menu/content mutation routes so that
- * any successful POST/PUT/PATCH/DELETE automatically triggers
- * a WebSocket broadcast without changing existing controller code.
+ * Attaches to existing routes so any successful mutation
+ * automatically triggers a WebSocket broadcast.
  *
  * Usage:
  *   const { broadcastOnMenuSave, broadcastOnScreenSave } = require('./middleware/broadcastOnSave');
- *
- *   // Attach BEFORE your route handlers:
  *   app.use('/api/v1/menus', broadcastOnMenuSave);
  *   app.use('/api/v1/screens', broadcastOnScreenSave);
  */
 
-const { contentBroadcaster } = require('../socket');
+const { contentBroadcaster } = require('../socket/index');
 
-/**
- * After a successful mutation (POST/PUT/PATCH/DELETE) on menu routes,
- * broadcast a menu_updated event.
- */
 function broadcastOnMenuSave(req, res, next) {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    return next();
-  }
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
 
   const originalJson = res.json.bind(res);
   res.json = function (body) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      contentBroadcaster.broadcast({
-        type: 'menu_updated',
-        timestamp: Date.now(),
-      });
+      const event = { type: 'menu_updated', timestamp: Date.now() };
+      // Debug log for WebSocket broadcast
+      if (req.log) req.log.debug?.('[WS] Broadcasting menu update', event);
+      else console.log('[WS] Broadcasting menu update', event);
+      contentBroadcaster.broadcast(event);
     }
     return originalJson(body);
   };
@@ -38,27 +30,24 @@ function broadcastOnMenuSave(req, res, next) {
   next();
 }
 
-/**
- * After a successful mutation on screen/content routes,
- * broadcast a screen_updated event with the screen's alias or id.
- */
 function broadcastOnScreenSave(req, res, next) {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    return next();
-  }
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
 
   const originalJson = res.json.bind(res);
   res.json = function (body) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       const screenId = req.params.id || req.params.screenId || body?.data?._id;
       const alias = req.params.alias || body?.data?.alias;
-
-      contentBroadcaster.broadcast({
+      const event = {
         type: 'screen_updated',
         screenId,
         alias,
         timestamp: Date.now(),
-      });
+      };
+      // Debug log for WebSocket broadcast
+      if (req.log) req.log.debug?.('[WS] Broadcasting screen update', event);
+      else console.log('[WS] Broadcasting screen update', event);
+      contentBroadcaster.broadcast(event);
     }
     return originalJson(body);
   };
@@ -66,22 +55,17 @@ function broadcastOnScreenSave(req, res, next) {
   next();
 }
 
-/**
- * Generic content update broadcaster.
- * Broadcasts content_updated on any successful mutation.
- */
 function broadcastOnContentSave(req, res, next) {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    return next();
-  }
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
 
   const originalJson = res.json.bind(res);
   res.json = function (body) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      contentBroadcaster.broadcast({
-        type: 'content_updated',
-        timestamp: Date.now(),
-      });
+      const event = { type: 'content_updated', timestamp: Date.now() };
+      // Debug log for WebSocket broadcast
+      if (req.log) req.log.debug?.('[WS] Broadcasting content update', event);
+      else console.log('[WS] Broadcasting content update', event);
+      contentBroadcaster.broadcast(event);
     }
     return originalJson(body);
   };
@@ -89,8 +73,4 @@ function broadcastOnContentSave(req, res, next) {
   next();
 }
 
-module.exports = {
-  broadcastOnMenuSave,
-  broadcastOnScreenSave,
-  broadcastOnContentSave,
-};
+module.exports = { broadcastOnMenuSave, broadcastOnScreenSave, broadcastOnContentSave };

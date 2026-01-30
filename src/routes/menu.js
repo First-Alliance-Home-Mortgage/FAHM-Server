@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const menuController = require('../controllers/menuController');
+const { broadcastOnMenuSave } = require('../middleware/broadcastOnSave');
+
 const { authenticate, authorize } = require('../middleware/auth');
 // DELETE /menus/:id - admin only
 router.delete('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.deleteMenu);
@@ -21,8 +23,8 @@ router.post('/restore/:version', authenticate, authorize({ roles: ['admin'] }), 
 // POST /menus/reset - admin only
 router.post('/reset', authenticate, authorize({ roles: ['admin'] }), menuController.resetMenus);
 // POST /menus - admin only
-router.post('/', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, menuController.createMenu);
+router.post('/', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, broadcastOnMenuSave, menuController.createMenu);
 // PUT /menus/:id - admin only
-router.put('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, menuController.updateMenu);
+router.put('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, broadcastOnMenuSave, menuController.updateMenu);
 
 module.exports = router;
