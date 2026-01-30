@@ -18,6 +18,8 @@ router.get('/versions', authenticate, authorize({ roles: ['admin'] }), menuContr
 router.get('/', authenticate, menuController.getMenus);
 // GET /menus/:id - any authenticated user
 router.get('/:id', authenticate, menuController.getMenuById);
+// get /menus/alias/:alias - any authenticated user
+router.get('/alias/:alias', authenticate, menuController.getMenuByAlias);
 // POST /menus/restore/:version - admin only
 router.post('/restore/:version', authenticate, authorize({ roles: ['admin'] }), menuController.restoreMenuVersion);
 // POST /menus/reset - admin only

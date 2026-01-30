@@ -27,6 +27,9 @@ async function upsertMenus(menus) {
   return Menu.insertMany(normalized);
 }
 
+async function getMenuByAlias(alias) {
+  return Menu.findOne({ alias }).lean();
+}
 
 // Update a menu by ID
 async function updateMenu(menuId, menuData) {
@@ -42,6 +45,7 @@ module.exports = {
   getAllMenus,
   upsertMenus,
   getMenuById,
+  getMenuByAlias,
   updateMenu,
   deleteMenu
 };

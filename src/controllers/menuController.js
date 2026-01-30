@@ -111,6 +111,16 @@ exports.getMenuById = async (req, res, next) => {
   }
 };
 
+exports.getMenuByAlias = async (req, res, next) => {
+  try {
+    const menu = await menuService.getMenuByAlias(req.params.alias);
+    res.json(menu);
+  } catch (error) {
+    req.log.error('Error fetching menu by alias', { error });
+    next(error);
+  }
+};
+
 // GET /menus/grouped - get menus grouped by role and route type
 exports.getGroupedMenus = async (req, res, _next) => {
   try {
