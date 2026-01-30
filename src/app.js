@@ -9,6 +9,8 @@ const { notFound, errorHandler } = require('./middleware/error');
 const swaggerSpec = require('./config/swagger');
 const logger = require('./utils/logger');
 const { security } = require('./config/env');
+const contentUpdatesRouter = require('./routes/contentUpdates');
+const { broadcastOnMenuSave } = require('./middleware/broadcastOnSave');
 
 const app = express();
 
@@ -54,6 +56,12 @@ app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
+
+// Content update notification endpoints (WebSocket broadcasts)
+app.use('/api/v1/content-updates', contentUpdatesRouter);
+
+// Auto-broadcast middleware for menu mutations (before route handlers)
+app.use('/api/v1/menus', broadcastOnMenuSave);
 
 app.use('/api/v1', routes);
 
