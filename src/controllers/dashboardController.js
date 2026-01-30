@@ -49,7 +49,7 @@ exports.getReportEmbedConfig = async (req, res, next) => {
     }
 
     // Check if user has access to this report
-    if (!report.allowedRoles.includes(req.user.role)) {
+    if (!report.allowedRoles.includes(req.user.role?.slug)) {
       return next(createError(403, 'Access denied to this report'));
     }
 
@@ -142,8 +142,8 @@ exports.getMetrics = async (req, res, next) => {
       }
     }
 
-    // Get user's role name from populated role object
-    const userRoleName = req.user.role?.name;
+    // Get user's role slug from populated role object
+    const userRoleName = req.user.role?.slug;
 
     // User-specific or branch/regional based on role
     if (userRoleName === roles.LO_RETAIL || userRoleName === roles.LO_TPO) {
@@ -202,9 +202,9 @@ exports.getBranchPerformance = async (req, res, next) => {
     const query = {};
 
     // Access control: BM sees their branch, Admin sees all
-    if (req.user.role === roles.BRANCH_MANAGER) {
+    if (req.user.role?.slug === roles.BRANCH_MANAGER) {
       query.branchCode = req.user.branch;
-    } else if (req.user.role !== roles.ADMIN) {
+    } else if (req.user.role?.slug !== roles.ADMIN) {
       return next(createError(403, 'Access denied to branch performance data'));
     }
 
@@ -343,7 +343,7 @@ exports.refreshReport = async (req, res, next) => {
     const { reportId } = req.params;
 
     // Only admins and BMs can trigger refreshes
-    if (req.user.role !== roles.ADMIN && req.user.role !== roles.BRANCH_MANAGER) {
+    if (req.user.role?.slug !== roles.ADMIN && req.user.role?.slug !== roles.BRANCH_MANAGER) {
       return next(createError(403, 'Access denied to refresh reports'));
     }
 

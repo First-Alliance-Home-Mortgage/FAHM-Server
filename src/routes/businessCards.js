@@ -181,7 +181,7 @@ router.post(
 router.get(
   '/',
   authenticate,
-  authorize(roles.ADMIN, roles.BRANCH_MANAGER),
+  authorize({ roles: [roles.ADMIN, roles.BRANCH_MANAGER] }),
   businessCardController.list
 );
 

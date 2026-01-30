@@ -288,7 +288,7 @@ router.delete('/alerts/:alertId', authenticate, rateController.deleteRateAlert);
 router.post(
   '/alerts/check',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO),
+  authorize({ roles: [roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO] }),
   rateController.checkRateAlerts
 );
 
@@ -329,7 +329,7 @@ router.post(
 router.post(
   '/locks',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER, roles.BORROWER),
+  authorize({ roles: [roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER, roles.BORROWER] }),
   [
     body('loanId').isMongoId(),
     body('rateSnapshotId').isMongoId(),
@@ -360,7 +360,7 @@ router.post(
 router.get(
   '/locks/loan/:loanId',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER, roles.BORROWER),
+  authorize({ roles: [roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER, roles.BORROWER] }),
   rateController.getLoanRateLocks
 );
 
@@ -400,7 +400,7 @@ router.get(
 router.post(
   '/locks/:lockId/extend',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     body('extensionDays').isInt({ min: 1, max: 90 }),
     body('reason').notEmpty()

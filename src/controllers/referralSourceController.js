@@ -26,7 +26,7 @@ exports.create = async (req, res, next) => {
 
     // If no assigned LO specified, assign to creator if they're an LO
     if (!referralSourceData.assignedLoanOfficer && 
-        (req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO)) {
+        (req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO)) {
       referralSourceData.assignedLoanOfficer = req.user.userId;
     }
 
@@ -68,9 +68,9 @@ exports.list = async (req, res, next) => {
     const query = {};
 
     // Role-based filtering
-    if (req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) {
+    if (req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) {
       query.assignedLoanOfficer = req.user.userId;
-    } else if (req.user.role === roles.BORROWER) {
+    } else if (req.user.role?.slug === roles.BORROWER) {
       return next(createError(403, 'Borrowers cannot access referral sources'));
     }
 
@@ -133,7 +133,7 @@ exports.get = async (req, res, next) => {
     }
 
     // Authorization check
-    if ((req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) &&
+    if ((req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) &&
         referralSource.assignedLoanOfficer?._id.toString() !== req.user.userId) {
       return next(createError(403, 'Not authorized to view this referral source'));
     }
@@ -167,7 +167,7 @@ exports.update = async (req, res, next) => {
     }
 
     // Authorization check
-    if ((req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) &&
+    if ((req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) &&
         referralSource.assignedLoanOfficer?.toString() !== req.user.userId) {
       return next(createError(403, 'Not authorized to update this referral source'));
     }
@@ -245,7 +245,7 @@ exports.getAnalytics = async (req, res, next) => {
     }
 
     // Authorization check
-    if ((req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) &&
+    if ((req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) &&
         referralSource.assignedLoanOfficer?.toString() !== req.user.userId) {
       return next(createError(403, 'Not authorized to view analytics for this referral source'));
     }
@@ -345,7 +345,7 @@ exports.updateBranding = async (req, res, next) => {
     }
 
     // Authorization check
-    if ((req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) &&
+    if ((req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) &&
         referralSource.assignedLoanOfficer?.toString() !== req.user.userId) {
       return next(createError(403, 'Not authorized to update branding for this referral source'));
     }

@@ -74,7 +74,7 @@ router.get('/reports/:reportId/embed', authenticate, dashboardController.getRepo
 router.post(
   '/reports/:reportId/refresh',
   authenticate,
-  authorize('admin', 'branch_manager'),
+  authorize({ roles: ['admin', 'branch_manager'] }),
   dashboardController.refreshReport
 );
 
@@ -182,7 +182,7 @@ router.get('/my-kpis', authenticate, dashboardController.getMyKPIs);
 router.get(
   '/branch-performance',
   authenticate,
-  authorize('branch_manager', 'admin'),
+  authorize({ roles: ['branch_manager', 'admin'] }),
   dashboardController.getBranchPerformance
 );
 

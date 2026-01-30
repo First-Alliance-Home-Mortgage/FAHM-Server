@@ -164,7 +164,7 @@ exports.getCreditReport = async (req, res, next) => {
       req.user.id === creditReport.borrower._id.toString() ||
       req.user.id === creditReport.requestedBy._id.toString() ||
       req.user.id === creditReport.loan.assignedOfficer?.toString() ||
-      ['admin', 'loan_officer_retail', 'loan_officer_tpo'].includes(req.user.role);
+      ['admin', 'loan_officer_retail', 'loan_officer_tpo'].includes(req.user.role?.slug);
 
     if (!canAccess) {
       return next(createError(403, 'Access denied'));
@@ -191,7 +191,7 @@ exports.getCreditReport = async (req, res, next) => {
     };
 
     // Decrypt raw data if requested and user has permission
-    if (includeRawData === 'true' && ['admin', 'loan_officer_retail', 'loan_officer_tpo'].includes(req.user.role)) {
+    if (includeRawData === 'true' && ['admin', 'loan_officer_retail', 'loan_officer_tpo'].includes(req.user.role?.slug)) {
       response.creditReport.rawData = creditReport.decryptSensitiveData();
     }
 
@@ -218,7 +218,7 @@ exports.getCreditReportsForLoan = async (req, res, next) => {
     const canAccess = 
       req.user.id === loan.borrower?.toString() ||
       req.user.id === loan.assignedOfficer?.toString() ||
-      ['admin', 'loan_officer_retail', 'loan_officer_tpo'].includes(req.user.role);
+      ['admin', 'loan_officer_retail', 'loan_officer_tpo'].includes(req.user.role?.slug);
 
     if (!canAccess) {
       return next(createError(403, 'Access denied'));

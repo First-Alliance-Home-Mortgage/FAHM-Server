@@ -71,7 +71,7 @@ const router = express.Router();
 router.post(
   '/generate',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     body('loanId').notEmpty().withMessage('Loan ID is required'),
     body('validityDays').optional().isInt({ min: 1, max: 180 }).withMessage('Validity days must be between 1 and 180'),
@@ -254,7 +254,7 @@ router.post(
 router.post(
   '/:id/regenerate',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   preapprovalController.regenerate
 );
 
@@ -284,7 +284,7 @@ router.post(
 router.delete(
   '/:id',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   preapprovalController.deletePreapproval
 );
 

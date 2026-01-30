@@ -2,7 +2,6 @@ const express = require('express');
 const { body } = require('express-validator');
 const { authenticate, authorize } = require('../middleware/auth');
 const encompassController = require('../controllers/encompassController');
-const roles = require('../config/roles');
 
 const router = express.Router();
 
@@ -100,7 +99,7 @@ router.get('/encompassToken', encompassController.encompassToken);
  */
 router.get(
   '/test-connection',
-  authorize(roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN),
+  authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'admin'] }),
   encompassController.testConnection
 );
 /**
@@ -419,7 +418,7 @@ router.post('/loans/:id/messages/:messageId/read', encompassController.markMessa
  */
 router.get(
   '/loans/:id/sync-history',
-  authorize(roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN, roles.BRANCH_MANAGER),
+  authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'admin', 'branch_manager'] }),
   encompassController.getSyncHistory
 );
 
@@ -466,7 +465,7 @@ router.get(
  */
 router.post(
   '/loans/:id/link',
-  authorize(roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN),
+  authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'admin'] }),
   [body('encompassLoanId').notEmpty().withMessage('Encompass loan ID is required')],
   encompassController.linkLoan
 );
@@ -499,7 +498,7 @@ router.post(
  */
 router.post(
   '/loans/:id/unlink',
-  authorize(roles.ADMIN),
+  authorize({ roles: ['admin'] }),
   encompassController.unlinkLoan
 );
 
@@ -551,7 +550,7 @@ router.post(
  */
 router.patch(
   '/loans/:id/status',
-  authorize(roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN),
+  authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'admin'] }),
   encompassController.updateStatus
 );
 

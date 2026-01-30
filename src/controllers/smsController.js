@@ -44,7 +44,7 @@ exports.sendMessage = async (req, res, next) => {
       }
 
       // Authorization check
-      if (req.user.role === roles.BORROWER &&
+      if (req.user.role?.slug === roles.BORROWER &&
           loan.borrower.toString() !== req.user.userId) {
         return next(createError(403, 'Not authorized to send messages for this loan'));
       }
@@ -315,7 +315,7 @@ exports.getLoanMessages = async (req, res, _next) => {
     }
 
     // Authorization check
-    if (req.user.role === roles.BORROWER &&
+    if (req.user.role?.slug === roles.BORROWER &&
         loan.borrower.toString() !== req.user.userId) {
       return next(createError(403, 'Not authorized to view messages for this loan'));
     }
@@ -448,7 +448,7 @@ exports.getStats = async (req, res, _next) => {
     if (loanId) filters.loan = loanId;
 
     // Role-based filtering
-    if (req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) {
+    if (req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) {
       filters.sender = req.user.userId;
     }
 

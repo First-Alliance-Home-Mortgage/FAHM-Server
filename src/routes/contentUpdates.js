@@ -11,6 +11,7 @@
 
 const { Router } = require('express');
 const { contentBroadcaster } = require('../socket');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = Router();
 
@@ -27,7 +28,7 @@ const router = Router();
  *     "roles": ["borrower", "loan_officer_retail"]   // optional: target specific roles
  *   }
  */
-router.post('/notify', (req, res) => {
+router.post('/notify', authenticate, authorize({ roles: ['admin'] }), (req, res) => {
   const { type, screenId, alias, roles } = req.body;
 
   if (!type || !['content_updated', 'menu_updated', 'screen_updated'].includes(type)) {
@@ -64,7 +65,7 @@ router.post('/notify', (req, res) => {
  * Body:
  *   { "screenId": "abc123", "alias": "home" }
  */
-router.post('/screen-updated', (req, res) => {
+router.post('/screen-updated', authenticate, authorize({ roles: ['admin'] }), (req, res) => {
   const { screenId, alias } = req.body;
 
   if (!screenId && !alias) {
@@ -95,7 +96,7 @@ router.post('/screen-updated', (req, res) => {
  * Convenience endpoint: broadcast a menu_updated event.
  * Call this when drawer, tab, or stack menu items are added/removed/reordered.
  */
-router.post('/menu-updated', (req, res) => {
+router.post('/menu-updated', authenticate, authorize({ roles: ['admin'] }), (req, res) => {
   const event = {
     type: 'menu_updated',
     timestamp: Date.now(),

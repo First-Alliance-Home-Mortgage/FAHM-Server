@@ -11,8 +11,9 @@
 
 const jwt = require('jsonwebtoken');
 const { ContentUpdateBroadcaster } = require('./ContentUpdateBroadcaster');
+const { jwtSecret } = require('../config/env');
 
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = jwtSecret || '';
 
 /**
  * Verify a JWT token and extract user info.

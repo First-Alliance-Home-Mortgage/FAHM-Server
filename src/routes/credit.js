@@ -137,7 +137,7 @@ const router = express.Router(); // Removed unused 'query' import
 router.post(
   '/loans/:loanId/request',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO),
+  authorize({ roles: [roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO] }),
   body('borrowerId').notEmpty().withMessage('Borrower ID is required'),
   body('ssn').notEmpty().withMessage('SSN is required'),
   body('dateOfBirth').notEmpty().isISO8601().withMessage('Valid date of birth is required'),
@@ -328,7 +328,7 @@ router.get('/loans/:loanId/reports', authenticate, creditController.getCreditRep
 router.post(
   '/reports/:reportId/reissue',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO),
+  authorize({ roles: [roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO] }),
   creditController.reissueCreditReport
 );
 
@@ -401,7 +401,7 @@ router.post(
 router.get(
   '/logs',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO),
+  authorize({ roles: [roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO] }),
   creditController.getCreditPullLogs
 );
 
@@ -432,7 +432,7 @@ router.get(
 router.post(
   '/expired/purge',
   authenticate,
-  authorize(roles.ADMIN),
+  authorize({ roles: [roles.ADMIN] }),
   creditController.deleteExpiredReports
 );
 

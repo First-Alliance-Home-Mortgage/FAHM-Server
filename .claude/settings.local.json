@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx eslint:*)",
       "Bash(node -e:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(grep:*)",
+      "Bash(for f in src/controllers/smsController.js src/controllers/crmController.js src/controllers/consentController.js src/controllers/referralSourceController.js src/controllers/preapprovalController.js src/controllers/loanController.js src/controllers/posLinkController.js src/controllers/posController.js src/controllers/documentUploadController.js src/controllers/dashboardController.js)",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(done)",
+      "Bash(for:*)"
     ]
   }
 }

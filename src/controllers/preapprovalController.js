@@ -35,7 +35,7 @@ exports.generate = async (req, res, next) => {
 
     // Authorization: Only assigned LO or admin
     if (
-      req.user.role !== 'admin' &&
+      req.user.role?.slug !== 'admin' &&
       loan.assignedOfficer?._id?.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to generate letter for this loan'));
@@ -215,7 +215,7 @@ exports.getByLoan = async (req, res, next) => {
 
     // Authorization
     if (
-      req.user.role === 'borrower' &&
+      req.user.role?.slug === 'borrower' &&
       loan.borrower.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to view letters for this loan'));
@@ -256,7 +256,7 @@ exports.get = async (req, res, next) => {
 
     // Authorization
     if (
-      req.user.role === 'borrower' &&
+      req.user.role?.slug === 'borrower' &&
       letter.borrower._id.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to view this letter'));
@@ -288,7 +288,7 @@ exports.download = async (req, res, next) => {
 
     // Authorization
     if (
-      req.user.role === 'borrower' &&
+      req.user.role?.slug === 'borrower' &&
       letter.borrower.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to download this letter'));
@@ -349,7 +349,7 @@ exports.share = async (req, res, next) => {
 
     // Authorization
     if (
-      req.user.role === 'borrower' &&
+      req.user.role?.slug === 'borrower' &&
       letter.borrower._id.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to share this letter'));
@@ -363,9 +363,6 @@ exports.share = async (req, res, next) => {
     let result;
 
     if (method === 'email') {
-      // Generate download link (SAS URL with 24 hour expiration)
-      // ...existing code...
-
       // Download PDF from blob for email attachment
       const pdfStream = await azureBlobService.downloadFile(letter.pdfBlobName);
       const chunks = [];
@@ -399,6 +396,10 @@ exports.share = async (req, res, next) => {
       await letter.markSent('sms', recipient, req.user.userId);
     } else if (method === 'link') {
       // Generate shareable link
+      const downloadUrl = await azureBlobService.generateSasUrl(
+        letter.pdfBlobName,
+        24 * 60
+      );
 
       result = { downloadUrl };
       await letter.markSent('link', recipient || 'Generated', req.user.userId);
@@ -444,7 +445,7 @@ exports.regenerate = async (req, res, next) => {
 
     // Authorization: Only assigned LO or admin
     if (
-      req.user.role !== 'admin' &&
+      req.user.role?.slug !== 'admin' &&
       letter.loanOfficer._id.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to regenerate this letter'));
@@ -507,7 +508,7 @@ exports.deletePreapproval = async (req, res, next) => {
 
     // Authorization: Only assigned LO or admin
     if (
-      req.user.role !== 'admin' &&
+      req.user.role?.slug !== 'admin' &&
       letter.loanOfficer.toString() !== req.user.userId
     ) {
       return next(createError(403, 'Not authorized to delete this letter'));

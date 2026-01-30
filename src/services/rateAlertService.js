@@ -1,6 +1,9 @@
 const RateAlert = require('../models/RateAlert');
+const Notification = require('../models/Notification');
 const totalExpertService = require('./totalExpertService');
 const smsNotificationService = require('./smsNotificationService');
+const optimalBlueService = require('./optimalBlueService');
+const emailService = require('./emailService');
 const logger = require('../utils/logger');
 
 /**
@@ -72,9 +75,49 @@ class RateAlertService {
   }
 
   /**
+   * Check a single alert against current rates
+   */
   async checkSingleAlert(alert) {
-    // ...existing code...
-  }
+    try {
+      // Fetch current rate from Optimal Blue for this alert's scenario
+      const rateSheet = await optimalBlueService.getRateSheetCached({
+        productType: alert.productType,
+        loanTerm: alert.loanTerm,
+        loanAmount: alert.loanAmount,
+        creditScore: alert.creditScore,
+        ltv: alert.ltv,
+        propertyType: alert.propertyType,
+      });
+
+      // Find matching rate from the sheet
+      const matchingRate = rateSheet.find(
+        (r) => r.productType === alert.productType && r.loanTerm === alert.loanTerm
+      );
+
+      if (!matchingRate) {
+        logger.warn(`No matching rate found for alert ${alert._id}`);
+        alert.lastCheckedAt = new Date();
+        await alert.save();
+        return { triggered: false, currentRate: null };
+      }
+
+      const currentRate = matchingRate.rate;
+
+      // Update last checked timestamp
+      alert.lastCheckedAt = new Date();
+      await alert.save();
+
+      // Check if alert should trigger
+      if (alert.shouldTrigger(currentRate)) {
+        await alert.trigger(currentRate, alert.notificationMethod);
+        await this.sendNotifications(alert, currentRate, matchingRate);
+        await this.logToCRM(alert, currentRate);
+
+        logger.info(`Alert ${alert._id} triggered at rate ${currentRate}`);
+        return { triggered: true, currentRate };
+      }
+
+      return {
         triggered: false,
         currentRate
       };
@@ -110,13 +153,61 @@ class RateAlertService {
       }
 
       if (method === 'push' || method === 'all') {
-        // TODO: Implement push notification via Firebase/APNS
-        logger.info(`Push notification would be sent to user ${user._id}`);
+        // Persist in-app notification
+        await Notification.create({
+          user: user._id,
+          type: 'rate_alert',
+          title: `Rate Alert: ${notificationData.productType} ${notificationData.loanTerm}yr`,
+          body: `Current rate ${notificationData.currentRate}% has reached your target of ${notificationData.targetRate}%.`,
+          metadata: notificationData,
+        });
+
+        // Send Expo push notification if user has a push token
+        if (user.expoPushToken) {
+          try {
+            const { Expo } = require('expo-server-sdk');
+            const expo = new Expo();
+            if (Expo.isExpoPushToken(user.expoPushToken)) {
+              await expo.sendPushNotificationsAsync([{
+                to: user.expoPushToken,
+                sound: 'default',
+                title: `Rate Alert: ${notificationData.productType} ${notificationData.loanTerm}yr`,
+                body: `Current rate ${notificationData.currentRate}% has reached your target of ${notificationData.targetRate}%.`,
+                data: notificationData,
+              }]);
+              logger.info(`Push notification sent to user ${user._id}`);
+            }
+          } catch (pushError) {
+            logger.error(`Failed to send push notification to user ${user._id}: ${pushError.message}`);
+          }
+        }
       }
 
       if (method === 'email' || method === 'all') {
-        // TODO: Implement email notification
-        logger.info(`Email notification would be sent to ${user.email}`);
+        if (user.email) {
+          try {
+            await emailService.transporter.sendMail({
+              from: process.env.SMTP_FROM || '"First Alliance Home Mortgage" <noreply@fahm.com>',
+              to: user.email,
+              subject: `Rate Alert: ${notificationData.productType} ${notificationData.loanTerm}yr rate has reached ${notificationData.currentRate}%`,
+              html: `
+                <h2>Rate Alert Triggered</h2>
+                <p>Hi ${notificationData.userName},</p>
+                <p>Your rate alert for <strong>${notificationData.productType} ${notificationData.loanTerm}-year</strong> has been triggered.</p>
+                <ul>
+                  <li><strong>Current Rate:</strong> ${notificationData.currentRate}%</li>
+                  <li><strong>Your Target:</strong> ${notificationData.targetRate}%</li>
+                  <li><strong>Trigger Type:</strong> ${notificationData.triggerType}</li>
+                </ul>
+                <p>Log in to your account to take action.</p>
+                <p>— First Alliance Home Mortgage</p>
+              `,
+            });
+            logger.info(`Email rate alert sent to ${user.email}`);
+          } catch (emailError) {
+            logger.error(`Failed to send email notification to ${user.email}: ${emailError.message}`);
+          }
+        }
       }
 
       await alert.markNotificationSent();

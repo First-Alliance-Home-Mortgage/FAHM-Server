@@ -1,6 +1,15 @@
 
 // Capabilities are now stored in the database and referenced by role documents.
-// This file only provides role constants and the hasCapability utility.
+// This file provides role slug constants and the hasCapability utility.
+
+// Role slug constants — must match the `slug` field in the Role collection.
+const ADMIN = 'admin';
+const BRANCH_MANAGER = 'branch_manager';
+const LO_RETAIL = 'loan_officer_retail';
+const LO_TPO = 'loan_officer_tpo';
+const BROKER = 'broker';
+const REALTOR = 'realtor';
+const BORROWER = 'borrower';
 
 const hasCapability = (roleOrRoleObject, capability) => {
   // Only check capabilities from the role object (populated from DB)
@@ -16,6 +25,13 @@ const hasCapability = (roleOrRoleObject, capability) => {
 };
 
 module.exports = {
+  ADMIN,
+  BRANCH_MANAGER,
+  LO_RETAIL,
+  LO_TPO,
+  BROKER,
+  REALTOR,
+  BORROWER,
   hasCapability,
 };
 

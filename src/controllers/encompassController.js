@@ -6,7 +6,10 @@ const Message = require('../models/Message');
 const EncompassSyncLog = require('../models/EncompassSyncLog');
 const encompassService = require('../services/encompassService');
 const logger = require('../utils/logger');
-const roles = require('../config/roles');
+const { integrations } = require('../config/env');
+
+const STAFF_ROLES = ['loan_officer_tpo', 'loan_officer_retail', 'admin'];
+const BORROWER_ROLE = 'borrower';
 
 exports.encompassToken = async (req, res, next) => {
   try {
@@ -30,9 +33,9 @@ exports.testConnection = async (req, res, _next) => {
     };
 
     // Test 1: Check environment configuration
-    const hasClientId = !!process.env.ENCOMPASS_CLIENT_ID;
-    const hasClientSecret = !!process.env.ENCOMPASS_CLIENT_SECRET;
-    const hasInstanceId = !!process.env.ENCOMPASS_INSTANCE_ID;
+    const hasClientId = !!integrations.encompassClientId;
+    const hasClientSecret = !!integrations.encompassClientSecret;
+    const hasInstanceId = !!integrations.encompassInstanceId;
 
     results.checks.configuration = {
       status: hasClientId && hasClientSecret && hasInstanceId ? 'pass' : 'fail',
@@ -116,8 +119,9 @@ exports.syncLoan = async (req, res, next) => {
     if (!loan) return next(createError(404, 'Loan not found'));
 
     // Only allow loan officers, processors, and admins to sync
+    const userSlug = req.user.role?.slug;
     if (
-      ![roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN].includes(req.user.role) &&
+      !STAFF_ROLES.includes(userSlug) &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -197,9 +201,9 @@ exports.getContacts = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access
+    // Check access — borrowers can only view their own loan contacts
     if (
-      req.user.role === roles.BORROWER &&
+      req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -225,9 +229,9 @@ exports.getMessages = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access
+    // Check access — borrowers can only view their own loan messages
     if (
-      req.user.role === roles.BORROWER &&
+      req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -261,9 +265,9 @@ exports.sendMessage = async (req, res, next) => {
     const loan = await LoanApplication.findById(id);
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access
+    // Check access — borrowers can only message on their own loans
     if (
-      req.user.role === roles.BORROWER &&
+      req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -335,7 +339,7 @@ exports.getSyncHistory = async (req, res, next) => {
     if (!loan) return next(createError(404, 'Loan not found'));
 
     // Only allow loan officers and admins
-    if (![roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN, roles.BRANCH_MANAGER].includes(req.user.role)) {
+    if (!['loan_officer_tpo', 'loan_officer_retail', 'admin', 'branch_manager'].includes(req.user.role?.slug)) {
       return next(createError(403, 'Forbidden'));
     }
 
@@ -371,7 +375,7 @@ exports.linkLoan = async (req, res, next) => {
     if (!loan) return next(createError(404, 'Loan not found'));
 
     // Only allow loan officers and admins
-    if (![roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN].includes(req.user.role)) {
+    if (!STAFF_ROLES.includes(req.user.role?.slug)) {
       return next(createError(403, 'Forbidden'));
     }
 
@@ -432,7 +436,7 @@ exports.unlinkLoan = async (req, res, next) => {
     if (!loan) return next(createError(404, 'Loan not found'));
 
     // Only allow admins to unlink
-    if (req.user.role !== roles.ADMIN) {
+    if (req.user.role?.slug !== 'admin') {
       return next(createError(403, 'Only admins can unlink loans from Encompass'));
     }
 
@@ -490,7 +494,7 @@ exports.updateStatus = async (req, res, next) => {
     if (!loan) return next(createError(404, 'Loan not found'));
 
     // Only allow loan officers and admins
-    if (![roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN].includes(req.user.role)) {
+    if (!STAFF_ROLES.includes(req.user.role?.slug)) {
       return next(createError(403, 'Forbidden'));
     }
 
@@ -552,9 +556,9 @@ exports.uploadDocument = async (req, res, next) => {
     const loan = await LoanApplication.findById(id);
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow loan officers, processors, and admins
+    // Only allow loan officers, processors, admins, or the borrower themselves
     if (
-      ![roles.LO_TPO, roles.LO_RETAIL, roles.ADMIN].includes(req.user.role) &&
+      !STAFF_ROLES.includes(req.user.role?.slug) &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -614,9 +618,9 @@ exports.getDocuments = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access
+    // Check access — borrowers can only view their own loan documents
     if (
-      req.user.role === roles.BORROWER &&
+      req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -645,9 +649,9 @@ exports.downloadDocument = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access
+    // Check access — borrowers can only download their own loan documents
     if (
-      req.user.role === roles.BORROWER &&
+      req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
     ) {
       return next(createError(403, 'Forbidden'));
@@ -681,7 +685,7 @@ exports.downloadDocument = async (req, res, next) => {
 exports.webhook = async (req, res, next) => {
   try {
     const signature = req.headers['x-encompass-signature'];
-    const webhookSecret = process.env.ENCOMPASS_WEBHOOK_SECRET;
+    const webhookSecret = integrations.encompassWebhookSecret;
 
     // Verify webhook signature if secret is configured
     if (webhookSecret && signature) {

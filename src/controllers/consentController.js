@@ -158,7 +158,7 @@ exports.revokeConsent = async (req, res, next) => {
     // Only borrower or admin can revoke
     if (
       consent.borrower.toString() !== req.user.userId &&
-      req.user.role !== 'admin'
+      req.user.role?.slug !== 'admin'
     ) {
       return next(createError(403, 'Not authorized to revoke this consent'));
     }
@@ -199,7 +199,7 @@ exports.getConsents = async (req, res, next) => {
     let query = {};
 
     // Borrowers see consents they granted
-    if (req.user.role === 'borrower') {
+    if (req.user.role?.slug === 'borrower') {
       query.borrower = req.user.userId;
     } else {
       // Others see consents granted to them
@@ -214,7 +214,7 @@ exports.getConsents = async (req, res, next) => {
     }
 
     // Filter by role (for borrowers)
-    if (role && req.user.role === 'borrower') {
+    if (role && req.user.role?.slug === 'borrower') {
       query.grantedToRole = role;
     }
 
@@ -258,7 +258,7 @@ exports.getConsent = async (req, res, next) => {
     if (
       consent.borrower._id.toString() !== req.user.userId &&
       consent.grantedTo._id.toString() !== req.user.userId &&
-      req.user.role !== 'admin'
+      req.user.role?.slug !== 'admin'
     ) {
       return next(createError(403, 'Not authorized to view this consent'));
     }

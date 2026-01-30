@@ -40,12 +40,12 @@ exports.generateLink = async (req, res, next) => {
       }
 
       // Authorization: Borrower can only access own loans, LOs can access assigned loans
-      if (req.user.role === roles.BORROWER && loan.borrower.toString() !== userId) {
+      if (req.user.role?.slug === roles.BORROWER && loan.borrower.toString() !== userId) {
         return next(createError(403, 'Not authorized to access this loan'));
       } else if (
-        (req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) &&
+        (req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) &&
         loan.assignedOfficer?.toString() !== userId &&
-        req.user.role !== roles.ADMIN
+        req.user.role?.slug !== roles.ADMIN
       ) {
         return next(createError(403, 'Not authorized to access this loan'));
       }
@@ -222,7 +222,7 @@ exports.getSession = async (req, res, next) => {
     const userId = req.user.userId;
     const isOwner = session.user._id.toString() === userId;
     const isLO = session.loanOfficer?._id.toString() === userId;
-    const isAdmin = req.user.role === roles.ADMIN;
+    const isAdmin = req.user.role?.slug === roles.ADMIN;
 
     if (!isOwner && !isLO && !isAdmin) {
       return next(createError(403, 'Not authorized to view this session'));
@@ -258,7 +258,7 @@ exports.getAnalytics = async (req, res, next) => {
     const userId = req.user.userId;
     const isOwner = session.user._id.toString() === userId;
     const isLO = session.loanOfficer?.toString() === userId;
-    const isAdmin = req.user.role === roles.ADMIN;
+    const isAdmin = req.user.role?.slug === roles.ADMIN;
 
     if (!isOwner && !isLO && !isAdmin) {
       return next(createError(403, 'Not authorized to view analytics'));
@@ -316,7 +316,7 @@ exports.getLOSessions = async (req, res, next) => {
     let query = {};
 
     // Role-based filtering
-    if (req.user.role === roles.LO_RETAIL || req.user.role === roles.LO_TPO) {
+    if (req.user.role?.slug === roles.LO_RETAIL || req.user.role?.slug === roles.LO_TPO) {
       query.loanOfficer = req.user.userId;
     } else if (loanOfficerId) {
       query.loanOfficer = loanOfficerId;
@@ -375,7 +375,7 @@ exports.cancelSession = async (req, res, next) => {
     // Authorization check
     const userId = req.user.userId;
     const isOwner = session.user.toString() === userId;
-    const isAdmin = req.user.role === roles.ADMIN;
+    const isAdmin = req.user.role?.slug === roles.ADMIN;
 
     if (!isOwner && !isAdmin) {
       return next(createError(403, 'Not authorized to cancel this session'));

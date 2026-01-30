@@ -373,7 +373,7 @@ router.patch(
 router.get(
   '/stats',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     query('startDate')
       .optional()
@@ -409,7 +409,7 @@ router.get(
 router.post(
   '/sync-to-encompass',
   authenticate,
-  authorize(roles.ADMIN),
+  authorize({ roles: [roles.ADMIN] }),
   smsController.syncToEncompass
 );
 

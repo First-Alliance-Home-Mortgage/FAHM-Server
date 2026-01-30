@@ -346,7 +346,7 @@ router.post(
 router.get(
   '/stats',
   authenticate,
-  authorize(roles.ADMIN, roles.BRANCH_MANAGER),
+  authorize({ roles: [roles.ADMIN, roles.BRANCH_MANAGER] }),
   [
     query('startDate').optional().isISO8601().toDate(),
     query('endDate').optional().isISO8601().toDate()
@@ -371,7 +371,7 @@ router.get(
 router.get(
   '/escalated',
   authenticate,
-  authorize(roles.ADMIN, roles.BRANCH_MANAGER, roles.LO_RETAIL, roles.LO_TPO),
+  authorize({ roles: [roles.ADMIN, roles.BRANCH_MANAGER, roles.LO_RETAIL, roles.LO_TPO] }),
   chatbotController.getEscalatedSessions
 );
 
@@ -412,7 +412,7 @@ router.get(
 router.post(
   '/session/:sessionId/resolve',
   authenticate,
-  authorize(roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO),
+  authorize({ roles: [roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO] }),
   [
     param('sessionId').notEmpty().isString().withMessage('Session ID required'),
     body('resolutionNotes').notEmpty().isString().trim().isLength({ min: 10, max: 1000 }).withMessage('Resolution notes must be 10-1000 characters')

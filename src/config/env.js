@@ -19,6 +19,7 @@ const recommended = [
   'ENCOMPASS_CLIENT_ID',
   'ENCOMPASS_CLIENT_SECRET',
   'ENCOMPASS_INSTANCE_ID',
+  'ENCOMPASS_WEBHOOK_SECRET',
   'POS_API_URL',
   'XACTUS_API_URL',
   'REDIS_URL',
@@ -26,6 +27,14 @@ const recommended = [
   'OTEL_EXPORTER_OTLP_ENDPOINT',
   'CORS_ORIGINS',
   'TWILIO_AUTH_TOKEN',
+  'TWILIO_ACCOUNT_SID',
+  'TWILIO_PHONE_NUMBER',
+  'SMTP_HOST',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM',
+  'SMTP_PORT',
+  'API_BASE_URL',
 ];
 
 [...required, ...recommended].forEach((key) => {
@@ -55,8 +64,25 @@ module.exports = {
   security: {
     corsOrigins: process.env.CORS_ORIGINS || '*',
   },
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    phoneNumber: process.env.TWILIO_PHONE_NUMBER,
+  },
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || 587),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.SMTP_FROM || '"First Alliance Home Mortgage" <noreply@fahm.com>',
+  },
+  apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:4000',
   integrations: {
     encompass: process.env.ENCOMPASS_API_URL,
+    encompassClientId: process.env.ENCOMPASS_CLIENT_ID,
+    encompassClientSecret: process.env.ENCOMPASS_CLIENT_SECRET,
+    encompassInstanceId: process.env.ENCOMPASS_INSTANCE_ID,
+    encompassWebhookSecret: process.env.ENCOMPASS_WEBHOOK_SECRET,
     totalExpert: process.env.TOTAL_EXPERT_API_URL,
     totalExpertApiKey: process.env.TOTAL_EXPERT_API_KEY,
     pos: process.env.POS_API_URL,

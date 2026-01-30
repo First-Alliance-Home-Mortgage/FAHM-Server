@@ -7,7 +7,7 @@ const { audit } = require('../utils/audit');
 exports.list = async (req, res, next) => {
   try {
     const filter = {};
-    if (req.user.role === roles.BORROWER) {
+    if (req.user.role?.slug === roles.BORROWER) {
       filter.borrower = req.user._id;
     }
     const loans = await LoanApplication.find(filter)

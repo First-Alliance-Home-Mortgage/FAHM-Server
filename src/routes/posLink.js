@@ -429,7 +429,7 @@ router.get(
 router.get(
   '/lo-sessions',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     query('loanOfficerId').optional().isMongoId(),
     query('status').optional().isIn(['pending', 'active', 'completed', 'expired', 'cancelled', 'failed']),

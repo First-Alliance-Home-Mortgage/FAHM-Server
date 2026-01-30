@@ -91,7 +91,7 @@ exports.initiateApplication = async (req, res, next) => {
     }
 
     // Authorization check
-    if (req.user.role === 'borrower' && loan.borrower._id.toString() !== req.user._id.toString()) {
+    if (req.user.role?.slug === 'borrower' && loan.borrower._id.toString() !== req.user._id.toString()) {
       return next(createError(403, 'Not authorized to access this loan'));
     }
 

@@ -24,9 +24,9 @@ class EncompassService {
       return this.accessToken;
     }
     try {
-      const clientId = process.env.ENCOMPASS_CLIENT_ID;
-      const clientSecret = process.env.ENCOMPASS_CLIENT_SECRET;
-      const instanceId = process.env.ENCOMPASS_INSTANCE_ID;
+      const clientId = integrations.encompassClientId;
+      const clientSecret = integrations.encompassClientSecret;
+      const instanceId = integrations.encompassInstanceId;
       if (!clientId || !clientSecret || !instanceId) {
         throw new Error('Missing Encompass OAuth credentials or instance ID');
       }

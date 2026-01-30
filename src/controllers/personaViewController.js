@@ -128,8 +128,6 @@ exports.resetToDefault = async (req, res, next) => {
  */
 exports.getDashboardData = async (req, res, next) => {
   try {
-    // ...existing code...
-
     // Get persona view configuration
     let view = await PersonaView.findOne({ user: req.user.userId });
     if (!view) {
@@ -146,28 +144,28 @@ exports.getDashboardData = async (req, res, next) => {
     // Apply role-based filtering
     switch (req.user.role) {
       case 'borrower':
-        dashboardData.myLoans = await this.getBorrowerDashboard(req.user.userId, view);
+        dashboardData.myLoans = await exports.getBorrowerDashboard(req.user.userId, view);
         break;
 
       case 'loan_officer_retail':
       case 'loan_officer_tpo':
-        dashboardData.pipeline = await this.getLODashboard(req.user.userId, view);
+        dashboardData.pipeline = await exports.getLODashboard(req.user.userId, view);
         break;
 
       case 'realtor':
-        dashboardData.referrals = await this.getRealtorDashboard(req.user.userId, view);
+        dashboardData.referrals = await exports.getRealtorDashboard(req.user.userId, view);
         break;
 
       case 'broker':
-        dashboardData.submissions = await this.getBrokerDashboard(req.user.userId, view);
+        dashboardData.submissions = await exports.getBrokerDashboard(req.user.userId, view);
         break;
 
       case 'branch_manager':
-        dashboardData.branch = await this.getBMDashboard(req.user.userId, view);
+        dashboardData.branch = await exports.getBMDashboard(req.user.userId, view);
         break;
 
       case 'admin':
-        dashboardData.overview = await this.getAdminDashboard(req.user.userId, view);
+        dashboardData.overview = await exports.getAdminDashboard(req.user.userId, view);
         break;
 
       default:
@@ -190,7 +188,7 @@ exports.getDashboardData = async (req, res, next) => {
 /**
  * Get borrower-specific dashboard data
  */
-exports.getBorrowerDashboard = async function(_userId, _view) {
+exports.getBorrowerDashboard = async function(userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
   const Document = require('../models/Document');
 
@@ -217,7 +215,7 @@ exports.getBorrowerDashboard = async function(_userId, _view) {
 /**
  * Get LO-specific dashboard data
  */
-exports.getLODashboard = async function(_userId, _view) {
+exports.getLODashboard = async function(userId, view) {
   const LoanApplication = require('../models/LoanApplication');
 
   const query = { assignedOfficer: userId };
@@ -257,7 +255,7 @@ exports.getLODashboard = async function(_userId, _view) {
 /**
  * Get realtor-specific dashboard data
  */
-exports.getRealtorDashboard = async function(_userId, _view) {
+exports.getRealtorDashboard = async function(userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
 
   // Find loans where realtor has consent
@@ -287,11 +285,11 @@ exports.getRealtorDashboard = async function(_userId, _view) {
 /**
  * Get broker-specific dashboard data
  */
-exports.getBrokerDashboard = async function(_userId, _view) {
+exports.getBrokerDashboard = async function(userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
 
-  const loans = await LoanApplication.find({ 
-    broker: userId 
+  const loans = await LoanApplication.find({
+    broker: userId
   })
     .populate('borrower', 'name email')
     .populate('assignedOfficer', 'name email phone')
@@ -311,7 +309,7 @@ exports.getBrokerDashboard = async function(_userId, _view) {
 /**
  * Get branch manager-specific dashboard data
  */
-exports.getBMDashboard = async function(_userId, _view) {
+exports.getBMDashboard = async function(userId, _view) {
   const LoanApplication = require('../models/LoanApplication');
   const User = require('../models/User');
 

@@ -106,8 +106,8 @@ exports.syncContacts = async (req, res, next) => {
  */
 exports.getContacts = async (req, res, next) => {
   try {
-    const userId = req.user.role === 'borrower' ? req.user.id : null;
-    const assignedTo = req.user.role !== 'borrower' ? req.user.id : null;
+    const userId = req.user.role?.slug === 'borrower' ? req.user.id : null;
+    const assignedTo = req.user.role?.slug !== 'borrower' ? req.user.id : null;
 
     const query = {};
     if (userId) {

@@ -42,7 +42,7 @@ exports.createPresignedUpload = async (req, res, next) => {
 
     const isBorrower = loan.borrower.toString() === uploadedBy.toString();
     const isOfficer = loan.assignedOfficer?.toString() === uploadedBy.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isBorrower && !isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to upload documents for this loan'));
@@ -110,7 +110,7 @@ exports.uploadDocument = async (req, res, next) => {
     // Check access rights
     const isBorrower = loan.borrower.toString() === uploadedBy.toString();
     const isOfficer = loan.assignedOfficer?.toString() === uploadedBy.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isBorrower && !isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to upload documents for this loan'));
@@ -297,7 +297,7 @@ exports.getDocumentsByLoan = async (req, res, next) => {
 
     const isBorrower = loan.borrower.toString() === req.user._id.toString();
     const isOfficer = loan.assignedOfficer?.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isBorrower && !isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to view documents for this loan'));
@@ -350,7 +350,7 @@ exports.getDocument = async (req, res, next) => {
     // Check access rights
     const isBorrower = document.loan.borrower.toString() === req.user._id.toString();
     const isOfficer = document.loan.assignedOfficer?.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isBorrower && !isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to view this document'));
@@ -389,7 +389,7 @@ exports.downloadDocument = async (req, res, next) => {
     // Check access rights
     const isBorrower = document.loan.borrower.toString() === req.user._id.toString();
     const isOfficer = document.loan.assignedOfficer?.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isBorrower && !isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to download this document'));
@@ -433,7 +433,7 @@ exports.deleteDocument = async (req, res, next) => {
     // Only borrower, LO, or admin can delete
     const isBorrower = document.loan.borrower.toString() === req.user._id.toString();
     const isOfficer = document.loan.assignedOfficer?.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isBorrower && !isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to delete this document'));
@@ -480,7 +480,7 @@ exports.retrySyncToPOS = async (req, res, next) => {
 
     // Only LO or admin can retry sync
     const isOfficer = document.loan.assignedOfficer?.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role?.slug === 'admin';
 
     if (!isOfficer && !isAdmin) {
       return next(createError(403, 'You do not have permission to retry sync'));

@@ -106,13 +106,7 @@ const router = express.Router();
 router.post(
   '/presign',
   authenticate,
-  authorize(
-    roles.ADMIN,
-    roles.LO_RETAIL,
-    roles.LO_TPO,
-    roles.BROKER,
-    roles.BORROWER
-  ),
+  authorize({ roles: [roles.ADMIN, roles.LO_RETAIL, roles.LO_TPO, roles.BROKER, roles.BORROWER] }),
   [
     body('loanId').isMongoId().withMessage('Invalid loan ID'),
     body('documentType').isString().notEmpty(),
@@ -320,7 +314,7 @@ router.delete('/:id', authenticate, documentUploadController.deleteDocument);
 router.post(
   '/:id/retry-sync',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.ADMIN] }),
   [body('posSystem').optional().isIn(['blend', 'big_pos', 'encompass'])],
   documentUploadController.retrySyncToPOS
 );

@@ -96,7 +96,7 @@ const roles = require('../config/roles');
 router.post(
   '/',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }),
     body('type').isIn(['realtor', 'builder', 'financial_planner', 'attorney', 'cpa', 'other']),
@@ -224,7 +224,7 @@ router.get(
 router.get(
   '/top-performers',
   authenticate,
-  authorize(roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     query('startDate').optional().isISO8601(),
     query('endDate').optional().isISO8601(),
@@ -298,7 +298,7 @@ router.get(
 router.patch(
   '/:id',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     body('name').optional().trim().notEmpty().isLength({ max: 100 }),
     body('type').optional().isIn(['realtor', 'builder', 'financial_planner', 'attorney', 'cpa', 'other']),
@@ -342,7 +342,7 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  authorize(roles.ADMIN),
+  authorize({ roles: [roles.ADMIN] }),
   referralSourceController.deleteReferralSource
 );
 
@@ -486,7 +486,7 @@ router.get(
 router.patch(
   '/:id/branding',
   authenticate,
-  authorize(roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN),
+  authorize({ roles: [roles.LO_RETAIL, roles.LO_TPO, roles.BRANCH_MANAGER, roles.ADMIN] }),
   [
     body('branding.logo').optional().trim().isLength({ max: 500 }),
     body('branding.primaryColor').optional().matches(/^#[0-9A-Fa-f]{6}$/),

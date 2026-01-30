@@ -92,7 +92,7 @@ router.post(
     body('assignedOfficer').optional().isMongoId(),
     body('status').optional().isString(),
   ],
-  authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BROKER, roles.BORROWER),
+  authorize({ roles: [roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BROKER, roles.BORROWER] }),
   loanController.create
 );
 
@@ -159,7 +159,7 @@ router.get('/:id', loanController.getById);
  *       404:
  *         description: Loan not found
  */
-router.patch('/:id/status', authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL), loanController.updateStatus);
+router.patch('/:id/status', authorize({ roles: [roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL] }), loanController.updateStatus);
 
 /**
  * @swagger
@@ -183,7 +183,7 @@ router.patch('/:id/status', authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL
  */
 router.post(
   '/:id/preapproval',
-  authorize(roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER),
+  authorize({ roles: [roles.ADMIN, roles.LO_TPO, roles.LO_RETAIL, roles.BRANCH_MANAGER] }),
   preapprovalController.generate
 );
 
