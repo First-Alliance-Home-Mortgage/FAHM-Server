@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const User = require('../../src/models/User');
 const jwt = require('jsonwebtoken');
 // ...existing code...
-const path = require('path');
 const { jwtSecret } = require('../../src/config/env');
 
 // Mock Azure Blob uploads to avoid external dependency during tests

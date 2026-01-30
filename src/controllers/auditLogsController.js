@@ -8,7 +8,7 @@ exports.getConsentLogs = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(100);
     res.json({ success: true, data: logs });
-  } catch (err) {
+  } catch (_err) {
     next(createError(500, 'Failed to fetch consent audit logs'));
   }
 };
@@ -20,7 +20,7 @@ exports.getCrmLogs = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(100);
     res.json({ success: true, data: logs });
-  } catch (err) {
+  } catch (_err) {
     next(createError(500, 'Failed to fetch CRM audit logs'));
   }
 };
@@ -32,7 +32,7 @@ exports.getCreditLogs = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(100);
     res.json({ success: true, data: logs });
-  } catch (err) {
+  } catch (_err) {
     next(createError(500, 'Failed to fetch credit audit logs'));
   }
 };

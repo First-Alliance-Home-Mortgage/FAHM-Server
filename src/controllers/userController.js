@@ -2,8 +2,6 @@ const createError = require('http-errors');
 const { audit } = require('../utils/audit');
 const { body, param, query, validationResult } = require('express-validator');
 const User = require('../models/User');
-const Role = require('../models/Role');
-const Capability = require('../models/Capability');
 
 exports.me = async (req, res, next) => {
   try {

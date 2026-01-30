@@ -4,24 +4,12 @@ const levelIndex = (level) => levels.indexOf(level);
 
 const currentLevel = process.env.LOG_LEVEL || 'info';
 
-const log = (level, message, meta = {}) => {
+const log = (level, message, _meta = {}) => {
   if (levelIndex(level) > levelIndex(currentLevel)) {
     return;
   }
 
-  const cleanMeta = { ...meta };
-  const reqContext = cleanMeta.req;
-  delete cleanMeta.req;
 
-  const payload = {
-    level,
-    message,
-    requestId: reqContext?.id,
-    userId: reqContext?.user?._id,
-    role: reqContext?.user?.role,
-    ...cleanMeta,
-    timestamp: new Date().toISOString(),
-  };
 
   // Structured logging payload (can be piped to external logging service)
 };
