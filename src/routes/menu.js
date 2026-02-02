@@ -29,4 +29,6 @@ router.post('/', authenticate, authorize({ roles: ['admin'] }), menuController.v
 // PUT /menus/:id - admin only
 router.put('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, broadcastOnMenuSave, menuController.updateMenu);
 
+router.patch('/:id/visibility', authenticate, authorize({ roles: ['admin'] }), menuController.updateMenuVisibility);
+
 module.exports = router;

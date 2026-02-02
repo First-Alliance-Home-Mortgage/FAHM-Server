@@ -82,8 +82,6 @@ exports.createMenu = async (req, res, next) => {
 exports.updateMenu = async (req, res, next) => {
   try {
     const errors = validationResult(req);
-        console.log(errors);
-    console.log(req.body);
     if (!errors.isEmpty()) {
       return next(createError(400, 'Validation failed', { errors: errors.array() }));
     }
@@ -97,6 +95,25 @@ exports.updateMenu = async (req, res, next) => {
     res.json(updatedMenu);
   } catch (error) {
     req.log.error('Error updating menu', { error, body: req.body });
+    next(error);
+  }
+};
+
+exports.updateMenuVisibility = async (req, res, next) => {
+  try {
+    const menuId = req.params.id;
+    const { visible } = req.body;
+    if (typeof visible !== 'boolean') {
+      return next(createError(400, 'Visible must be a boolean'));
+    }
+    const updatedMenu = await menuService.updateMenu(menuId, { visible });
+    if (!updatedMenu) {
+      return next(createError(404, 'Menu not found'));
+    }
+    req.log.info('Menu visibility updated', { menuId: updatedMenu._id, visible });
+    res.json(updatedMenu);
+  } catch (error) {
+    req.log.error('Error updating menu visibility', { error, body: req.body });
     next(error);
   }
 };
