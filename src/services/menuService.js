@@ -31,6 +31,11 @@ async function getMenuByAlias(alias) {
   return Menu.findOne({ alias }).lean();
 }
 
+// Create a new menu
+async function createMenu(menuData) {
+  return Menu.create(menuData);
+}
+
 // Update a menu by ID
 async function updateMenu(menuId, menuData) {
   return Menu.findByIdAndUpdate(menuId, menuData, { new: true, runValidators: true });
@@ -46,6 +51,7 @@ module.exports = {
   upsertMenus,
   getMenuById,
   getMenuByAlias,
+  createMenu,
   updateMenu,
   deleteMenu
 };

@@ -121,6 +121,9 @@ exports.updateMenuVisibility = async (req, res, next) => {
 exports.getMenuById = async (req, res, next) => {
   try {
     const menu = await menuService.getMenuById(req.params.id);
+    if (!menu) {
+      return next(createError(404, 'Menu not found'));
+    }
     res.json(menu);
   } catch (error) {
     req.log.error('Error fetching menu by ID', { error });
@@ -131,6 +134,9 @@ exports.getMenuById = async (req, res, next) => {
 exports.getMenuByAlias = async (req, res, next) => {
   try {
     const menu = await menuService.getMenuByAlias(req.params.alias);
+    if (!menu) {
+      return next(createError(404, 'Menu not found'));
+    }
     res.json(menu);
   } catch (error) {
     req.log.error('Error fetching menu by alias', { error });
