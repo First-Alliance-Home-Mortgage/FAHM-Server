@@ -16,10 +16,12 @@ describe('CMS API integration', () => {
   beforeAll(() => {
     const admin = {
       _id: new mongoose.Types.ObjectId(),
-      role: 'admin',
+      role: { name: 'admin', slug: 'admin', capabilities: [] },
       isActive: true,
     };
-    jest.spyOn(User, 'findById').mockReturnValue({ select: jest.fn().mockResolvedValue(admin) });
+    const populateStub = jest.fn().mockResolvedValue(admin);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    jest.spyOn(User, 'findById').mockReturnValue({ select: selectStub });
     adminToken = jwt.sign({ sub: admin._id }, jwtSecret, { expiresIn: '1h' });
   });
 

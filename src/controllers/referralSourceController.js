@@ -5,6 +5,7 @@ const ReferralSourceAnalytics = require('../models/ReferralSourceAnalytics');
 const LoanApplication = require('../models/LoanApplication');
 const logger = require('../utils/logger');
 const roles = require('../config/roles');
+const escapeRegex = require('../utils/escapeRegex');
 
 /**
  * Create a new referral source
@@ -82,9 +83,10 @@ exports.list = async (req, res, next) => {
 
     // Search by name or company
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { companyName: { $regex: search, $options: 'i' } }
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { companyName: { $regex: safeSearch, $options: 'i' } }
       ];
     }
 

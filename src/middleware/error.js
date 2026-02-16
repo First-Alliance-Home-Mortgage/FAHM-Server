@@ -8,7 +8,7 @@ const notFound = (req, res, next) => {
 const errorHandler = (err, req, res, _next) => {
   // Prefer explicit error status from http-errors; fall back to response status or 500.
   const status = err.status || err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500);
-  const logPayload = { path: req.originalUrl, req };
+  const logPayload = { path: req.originalUrl, method: req.method, requestId: req.id };
   if (status >= 500) {
     logPayload.stack = err.stack;
     logger.error(err.message, logPayload);

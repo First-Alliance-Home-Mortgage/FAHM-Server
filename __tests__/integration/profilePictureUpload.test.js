@@ -22,14 +22,14 @@ describe('POST /api/v1/users/profile-picture', () => {
       name: 'Test User',
       email: 'testuser@example.com',
       isActive: true,
-      role: 'borrower',
+      role: { name: 'borrower', slug: 'borrower', capabilities: [] },
       photo: null,
     };
 
     // Stub User model methods used by auth and controller
-    jest.spyOn(User, 'findById').mockReturnValue({
-      select: () => Promise.resolve(user),
-    });
+    const populateStub = jest.fn().mockResolvedValue(user);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    jest.spyOn(User, 'findById').mockReturnValue({ select: selectStub });
     jest
       .spyOn(User, 'findByIdAndUpdate')
       .mockImplementation((_id, update) => Promise.resolve({ ...user, photo: update.photo }));

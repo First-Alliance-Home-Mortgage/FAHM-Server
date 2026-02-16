@@ -13,6 +13,7 @@
 
 const { WebSocketServer, WebSocket } = require('ws');
 const url = require('url');
+const logger = require('../utils/logger');
 
 class ContentUpdateBroadcaster {
   /**
@@ -73,23 +74,23 @@ class ContentUpdateBroadcaster {
       };
 
       this.clients.add(client);
-      console.log(`[WS] Client connected: ${auth.userId} (${this.clients.size} total)`);
+      logger.info(`[WS] Client connected: ${auth.userId} (${this.clients.size} total)`);
 
       ws.on('pong', () => { client.isAlive = true; });
 
       ws.on('close', () => {
         this.clients.delete(client);
-        console.log(`[WS] Client disconnected: ${auth.userId} (${this.clients.size} total)`);
+        logger.info(`[WS] Client disconnected: ${auth.userId} (${this.clients.size} total)`);
       });
 
       ws.on('error', (err) => {
-        console.error(`[WS] Client error (${auth.userId}):`, err.message);
+        logger.error(`[WS] Client error (${auth.userId}): ${err.message}`);
         this.clients.delete(client);
       });
     });
 
     this._startHeartbeat();
-    console.log('[WS] ContentUpdateBroadcaster attached on /ws/content');
+    logger.info('[WS] ContentUpdateBroadcaster attached on /ws/content');
   }
 
   /**
@@ -107,7 +108,7 @@ class ContentUpdateBroadcaster {
       }
     }
 
-    console.log(`[WS] Broadcast "${event.type}" to ${sent}/${this.clients.size} clients`);
+    logger.info(`[WS] Broadcast "${event.type}" to ${sent}/${this.clients.size} clients`);
   }
 
   /**
@@ -128,7 +129,7 @@ class ContentUpdateBroadcaster {
       }
     }
 
-    console.log(`[WS] Broadcast "${event.type}" to ${sent} clients (roles: ${roles.join(', ')})`);
+    logger.info(`[WS] Broadcast "${event.type}" to ${sent} clients (roles: ${roles.join(', ')})`);
   }
 
   /** @returns {number} */
@@ -146,7 +147,7 @@ class ContentUpdateBroadcaster {
     }
     this.clients.clear();
     if (this.wss) { this.wss.close(); this.wss = null; }
-    console.log('[WS] ContentUpdateBroadcaster shut down');
+    logger.info('[WS] ContentUpdateBroadcaster shut down');
   }
 
   /** @private */

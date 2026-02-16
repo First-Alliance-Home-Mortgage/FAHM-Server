@@ -8,8 +8,7 @@
 
 const jwt = require('jsonwebtoken');
 const { ContentUpdateBroadcaster } = require('./ContentUpdateBroadcaster');
-
-const JWT_SECRET = process.env.JWT_SECRET || '';
+const { jwtSecret } = require('../config/env');
 
 /**
  * Replace with your own auth logic.
@@ -18,7 +17,7 @@ const JWT_SECRET = process.env.JWT_SECRET || '';
  */
 async function verifyToken(token) {
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, jwtSecret);
     const userId = payload.sub || payload.userId;
     if (!userId) return null;
     const roles = payload.roles || (payload.role ? [payload.role] : []);

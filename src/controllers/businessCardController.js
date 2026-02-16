@@ -5,6 +5,7 @@ const BusinessCard = require('../models/BusinessCard');
 const User = require('../models/User');
 const ReferralSource = require('../models/ReferralSource');
 const logger = require('../utils/logger');
+const escapeRegex = require('../utils/escapeRegex');
 
 /**
  * Create or update business card for authenticated user
@@ -390,10 +391,11 @@ exports.list = async (req, res, next) => {
 
     const filter = {};
     if (search) {
+      const safeSearch = escapeRegex(search);
       filter.$or = [
-        { slug: new RegExp(search, 'i') },
-        { email: new RegExp(search, 'i') },
-        { nmls: new RegExp(search, 'i') }
+        { slug: new RegExp(safeSearch, 'i') },
+        { email: new RegExp(safeSearch, 'i') },
+        { nmls: new RegExp(safeSearch, 'i') }
       ];
     }
     if (isActive !== undefined) {

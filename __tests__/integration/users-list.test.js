@@ -12,10 +12,12 @@ describe('Users list filters/pagination', () => {
   beforeAll(() => {
     admin = {
       _id: new mongoose.Types.ObjectId(),
-      role: 'admin',
+      role: { name: 'admin', slug: 'admin', capabilities: [] },
       isActive: true,
     };
-    jest.spyOn(User, 'findById').mockReturnValue({ select: jest.fn().mockResolvedValue(admin) });
+    const populateStub = jest.fn().mockResolvedValue(admin);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    jest.spyOn(User, 'findById').mockReturnValue({ select: selectStub });
     adminToken = jwt.sign({ sub: admin._id }, jwtSecret, { expiresIn: '1h' });
   });
 
@@ -27,10 +29,10 @@ describe('Users list filters/pagination', () => {
     jest.spyOn(User, 'countDocuments').mockResolvedValue(42);
     const chain = {
       select: function() { return this; },
+      populate: function() { return this; },
       sort: function() { return this; },
       skip: function() { return this; },
-      limit: function() { return this; },
-      lean: jest.fn().mockResolvedValue([{ _id: 'u1', name: 'Alice' }]),
+      limit: jest.fn().mockResolvedValue([{ _id: 'u1', name: 'Alice' }]),
     };
     jest.spyOn(User, 'find').mockReturnValue(chain);
 

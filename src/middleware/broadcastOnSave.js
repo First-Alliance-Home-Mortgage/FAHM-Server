@@ -11,6 +11,7 @@
  */
 
 const { contentBroadcaster } = require('../socket/index');
+const logger = require('../utils/logger');
 
 function broadcastOnMenuSave(req, res, next) {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
@@ -20,8 +21,7 @@ function broadcastOnMenuSave(req, res, next) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       const event = { type: 'menu_updated', timestamp: Date.now() };
       // Debug log for WebSocket broadcast
-      if (req.log) req.log.debug?.('[WS] Broadcasting menu update', event);
-      else console.log('[WS] Broadcasting menu update', event);
+      (req.log || logger).debug('[WS] Broadcasting menu update', event);
       contentBroadcaster.broadcast(event);
     }
     return originalJson(body);
@@ -45,8 +45,7 @@ function broadcastOnScreenSave(req, res, next) {
         timestamp: Date.now(),
       };
       // Debug log for WebSocket broadcast
-      if (req.log) req.log.debug?.('[WS] Broadcasting screen update', event);
-      else console.log('[WS] Broadcasting screen update', event);
+      (req.log || logger).debug('[WS] Broadcasting screen update', event);
       contentBroadcaster.broadcast(event);
     }
     return originalJson(body);
@@ -63,8 +62,7 @@ function broadcastOnContentSave(req, res, next) {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       const event = { type: 'content_updated', timestamp: Date.now() };
       // Debug log for WebSocket broadcast
-      if (req.log) req.log.debug?.('[WS] Broadcasting content update', event);
-      else console.log('[WS] Broadcasting content update', event);
+      (req.log || logger).debug('[WS] Broadcasting content update', event);
       contentBroadcaster.broadcast(event);
     }
     return originalJson(body);

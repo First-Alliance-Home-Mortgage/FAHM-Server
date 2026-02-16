@@ -63,9 +63,6 @@ exports.getMenus = async (req, res, next) => {
 exports.createMenu = async (req, res, next) => {
   try {
     const errors = validationResult(req);
-    console.log(errors);
-    console.log(req.body);
-
     if (!errors.isEmpty()) {
       return next(createError(400, 'Validation failed', { errors: errors.array() }));
     }

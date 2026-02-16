@@ -10,8 +10,13 @@
 
 const { Router } = require('express');
 const { contentBroadcaster } = require('../socket/index');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = Router();
+
+// All content-update broadcast endpoints require authentication + admin role
+router.use(authenticate);
+router.use(authorize({ roles: ['admin'] }));
 
 /**
  * POST /api/v1/content-updates/notify

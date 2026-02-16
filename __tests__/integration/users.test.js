@@ -12,10 +12,12 @@ describe('Users API integration', () => {
   beforeAll(() => {
     admin = {
       _id: new mongoose.Types.ObjectId(),
-      role: 'admin',
+      role: { name: 'admin', slug: 'admin', capabilities: [] },
       isActive: true,
     };
-    jest.spyOn(User, 'findById').mockReturnValue({ select: jest.fn().mockResolvedValue(admin) });
+    const populateStub = jest.fn().mockResolvedValue(admin);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    jest.spyOn(User, 'findById').mockReturnValue({ select: selectStub });
     adminToken = jwt.sign({ sub: admin._id }, jwtSecret, { expiresIn: '1h' });
   });
 
@@ -25,7 +27,9 @@ describe('Users API integration', () => {
 
   it('updates current user profile', async () => {
     const updated = { ...admin, name: 'Admin User' };
-    jest.spyOn(User, 'findByIdAndUpdate').mockReturnValue({ select: jest.fn().mockResolvedValue(updated) });
+    const populateStub = jest.fn().mockResolvedValue(updated);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    jest.spyOn(User, 'findByIdAndUpdate').mockReturnValue({ select: selectStub });
     const res = await request(app)
       .patch('/api/v1/users/me')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -38,10 +42,10 @@ describe('Users API integration', () => {
     jest.spyOn(User, 'countDocuments').mockResolvedValue(1);
     const chain = {
       select: function() { return this; },
+      populate: function() { return this; },
       sort: function() { return this; },
       skip: function() { return this; },
-      limit: function() { return this; },
-      lean: jest.fn().mockResolvedValue([{ _id: 'u1' }]),
+      limit: jest.fn().mockResolvedValue([{ _id: 'u1' }]),
     };
     jest.spyOn(User, 'find').mockReturnValue(chain);
     const res = await request(app)
@@ -53,8 +57,9 @@ describe('Users API integration', () => {
 
   it('creates a user (admin)', async () => {
     const payload = { name: 'John', email: 'john@example.com', password: 'secret123' };
+    const created = { _id: 'u2', ...payload, populate: jest.fn().mockResolvedValue({ _id: 'u2', ...payload }) };
     jest.spyOn(User, 'findOne').mockResolvedValue(null);
-    jest.spyOn(User, 'create').mockResolvedValue({ _id: 'u2', ...payload });
+    jest.spyOn(User, 'create').mockResolvedValue(created);
     const res = await request(app)
       .post('/api/v1/users')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -64,7 +69,9 @@ describe('Users API integration', () => {
   });
 
   it('updates a user (admin)', async () => {
-    jest.spyOn(User, 'findByIdAndUpdate').mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: 'u2', name: 'Jane' }) });
+    const populateStub = jest.fn().mockResolvedValue({ _id: 'u2', name: 'Jane' });
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    jest.spyOn(User, 'findByIdAndUpdate').mockReturnValue({ select: selectStub });
     const res = await request(app)
       .patch('/api/v1/users/u2')
       .set('Authorization', `Bearer ${adminToken}`)

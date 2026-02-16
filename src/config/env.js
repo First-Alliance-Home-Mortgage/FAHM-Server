@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const logger = require('../utils/logger');
 
 dotenv.config();
 
@@ -37,9 +38,17 @@ const recommended = [
   'API_BASE_URL',
 ];
 
-[...required, ...recommended].forEach((key) => {
+// Fail fast on missing required env vars (skip in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required env vars: ${missing.join(', ')}. Set them in .env.`);
+  }
+}
+
+recommended.forEach((key) => {
   if (!process.env[key]) {
-    console.warn(`[env] Missing ${required.includes(key) ? 'required' : 'recommended'} env var ${key}. Set it in .env.`);
+    logger.warn(`Missing recommended env var ${key}. Set it in .env.`);
   }
 });
 

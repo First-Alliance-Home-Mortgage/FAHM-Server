@@ -41,12 +41,14 @@ describe('middleware/auth.authenticate', () => {
   });
 
   it('attaches user on success', async () => {
-    const user = { _id: 'u1', role: 'borrower', isActive: true };
+    const user = { _id: 'u1', role: { name: 'borrower', slug: 'borrower', capabilities: [] }, isActive: true };
     const req = { headers: { authorization: 'Bearer good' } };
     const res = makeRes();
     const next = makeNext();
     jwt.verify.mockReturnValue({ sub: 'u1' });
-    User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(user) });
+    const populateStub = jest.fn().mockResolvedValue(user);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    User.findById.mockReturnValue({ select: selectStub });
 
     await authenticate(req, res, next);
 
@@ -60,7 +62,9 @@ describe('middleware/auth.authenticate', () => {
     const res = makeRes();
     const next = makeNext();
     jwt.verify.mockReturnValue({ sub: 'missing' });
-    User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
+    const populateStub = jest.fn().mockResolvedValue(null);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    User.findById.mockReturnValue({ select: selectStub });
 
     await authenticate(req, res, next);
 
@@ -70,12 +74,14 @@ describe('middleware/auth.authenticate', () => {
   });
 
   it('rejects inactive users', async () => {
-    const user = { _id: 'u1', role: 'borrower', isActive: false };
+    const user = { _id: 'u1', role: { name: 'borrower', slug: 'borrower', capabilities: [] }, isActive: false };
     const req = { headers: { authorization: 'Bearer good' } };
     const res = makeRes();
     const next = makeNext();
     jwt.verify.mockReturnValue({ sub: 'u1' });
-    User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(user) });
+    const populateStub = jest.fn().mockResolvedValue(user);
+    const selectStub = jest.fn().mockReturnValue({ populate: populateStub });
+    User.findById.mockReturnValue({ select: selectStub });
 
     await authenticate(req, res, next);
 
@@ -91,18 +97,18 @@ describe('middleware/auth.authorize', () => {
     const res = makeRes();
     const next = makeNext();
 
-    authorize('admin')(req, res, next);
+    authorize({ roles: ['admin'] })(req, res, next);
 
     const err = next.mock.calls[0][0];
     expect(err.status).toBe(401);
   });
 
   it('rejects when role not allowed', () => {
-    const req = { user: { role: 'borrower' } };
+    const req = { user: { role: { name: 'borrower', slug: 'borrower', capabilities: [] } } };
     const res = makeRes();
     const next = makeNext();
 
-    authorize('admin')(req, res, next);
+    authorize({ roles: ['admin'] })(req, res, next);
 
     const err = next.mock.calls[0][0];
     expect(err.status).toBe(403);
@@ -110,17 +116,18 @@ describe('middleware/auth.authorize', () => {
   });
 
   it('passes when role allowed', () => {
-    const req = { user: { role: 'admin' } };
+    const req = { user: { role: { name: 'admin', slug: 'admin', capabilities: [] } } };
     const res = makeRes();
     const next = makeNext();
 
-    authorize('admin')(req, res, next);
+    authorize({ roles: ['admin'] })(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
   });
 
   it('passes when capability allowed', () => {
-    const req = { user: { role: 'borrower' } };
+    const capObj = { name: 'loan:read:self' };
+    const req = { user: { role: { name: 'borrower', slug: 'borrower', capabilities: [capObj] } } };
     const res = makeRes();
     const next = makeNext();
 
@@ -130,7 +137,7 @@ describe('middleware/auth.authorize', () => {
   });
 
   it('rejects when capability missing', () => {
-    const req = { user: { role: 'borrower' } };
+    const req = { user: { role: { name: 'borrower', slug: 'borrower', capabilities: [] } } };
     const res = makeRes();
     const next = makeNext();
 
@@ -138,7 +145,7 @@ describe('middleware/auth.authorize', () => {
 
     const err = next.mock.calls[0][0];
     expect(err.status).toBe(403);
-    expect(err.message).toBe('Forbidden');
+    expect(err.message).toBe('Insufficient permissions');
   });
 });
 

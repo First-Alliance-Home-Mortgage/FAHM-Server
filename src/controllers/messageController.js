@@ -1,3 +1,7 @@
+const Message = require('../models/Message');
+const { validationResult } = require('express-validator');
+const createError = require('http-errors');
+
 // Get all messages for the authenticated user
 exports.getMyMessages = async (req, res, next) => {
   try {
@@ -32,9 +36,6 @@ exports.getMyMessages = async (req, res, next) => {
     next(err);
   }
 };
-const Message = require('../models/Message');
-const { validationResult } = require('express-validator');
-const createError = require('http-errors');
 
 exports.getMessagesByLoan = async (req, res, next) => {
   try {

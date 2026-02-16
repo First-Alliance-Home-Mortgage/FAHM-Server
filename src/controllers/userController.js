@@ -3,6 +3,7 @@ const { audit } = require('../utils/audit');
 const { body, param, query, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Role = require('../models/Role');
+const escapeRegex = require('../utils/escapeRegex');
 
 exports.me = async (req, res, next) => {
   try {
@@ -40,7 +41,7 @@ exports.updateProfile = async (req, res, next) => {
       if (req.body[key] !== undefined) patch[key] = req.body[key];
     }
     const updated = await User.findByIdAndUpdate(req.user._id, { $set: patch }, { new: true })
-      .select('+password')
+      .select('-password')
       .populate({
         path: 'role',
         populate: { path: 'capabilities' }
@@ -116,9 +117,10 @@ exports.listUsers = async (req, res, next) => {
     if (role) filter.role = role;
     if (typeof active === 'boolean') filter.isActive = active;
     if (q) {
+      const safeQ = escapeRegex(q);
       filter.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { email: { $regex: q, $options: 'i' } },
+        { name: { $regex: safeQ, $options: 'i' } },
+        { email: { $regex: safeQ, $options: 'i' } },
       ];
     }
     const skip = (page - 1) * limit;
@@ -143,7 +145,7 @@ exports.validateUserId = [param('id').isString().trim().notEmpty()];
 
 exports.getUserById = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password').select('-password')
+    const user = await User.findById(req.params.id).select('-password')
       .populate({
         path: 'role',
         populate: { path: 'capabilities' }
