@@ -46,6 +46,68 @@ router.get('/encompassToken', encompassController.encompassToken);
 
 /**
  * @swagger
+ * /encompass/token/introspect:
+ *   get:
+ *     summary: Introspect current Encompass access token
+ *     tags: [Encompass Integration]
+ *     description: Check whether the cached Encompass access token is still active and retrieve its metadata (expiry, username, instance).
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token introspection result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 active:
+ *                   type: boolean
+ *                 exp:
+ *                   type: number
+ *                 username:
+ *                   type: string
+ *                 encompass_instance_id:
+ *                   type: string
+ *       503:
+ *         description: Token introspection failed
+ */
+router.get(
+  '/token/introspect',
+  authorize({ roles: ['admin'] }),
+  encompassController.introspectToken
+);
+
+/**
+ * @swagger
+ * /encompass/token/revoke:
+ *   post:
+ *     summary: Revoke current Encompass access token
+ *     tags: [Encompass Integration]
+ *     description: Revoke the cached Encompass access token and clear the local cache. Useful for security rotation.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Revocation result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 revoked:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
+router.post(
+  '/token/revoke',
+  authorize({ roles: ['admin'] }),
+  encompassController.revokeToken
+);
+
+/**
+ * @swagger
  * /encompass/test-connection:
  *   get:
  *     summary: Test Encompass API connection

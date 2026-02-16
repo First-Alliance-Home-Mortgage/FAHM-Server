@@ -38,7 +38,19 @@
     { "key": "referralSourceId", "value": "" },
     { "key": "sessionId", "value": "" },
     { "key": "sessionToken", "value": "" },
-    { "key": "applicationId", "value": "" }
+    { "key": "applicationId", "value": "" },
+    { "key": "preapprovalId", "value": "" },
+    { "key": "consentId", "value": "" },
+    { "key": "menuId", "value": "" },
+    { "key": "menuAlias", "value": "dashboard" },
+    { "key": "menuVersion", "value": "" },
+    { "key": "roleId", "value": "" },
+    { "key": "capabilityId", "value": "" },
+    { "key": "screenSlug", "value": "dashboard" },
+    { "key": "featureFlagKey", "value": "" },
+    { "key": "attachmentId", "value": "" },
+    { "key": "chatSessionId", "value": "" },
+    { "key": "webhookSignature", "value": "" }
   ],
   "item": [
     {
@@ -170,10 +182,17 @@
             "method": "PATCH",
             "url": "{{baseUrl}}/loans/{{loanId}}/status",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { 
-              "mode": "raw", 
-              "raw": "{\n  \"status\": \"underwriting\",\n  \"milestones\": [\n    { \"name\": \"Application Submitted\", \"status\": \"completed\" },\n    { \"name\": \"Documentation Review\", \"status\": \"completed\" },\n    { \"name\": \"Underwriting\", \"status\": \"in_progress\" },\n    { \"name\": \"Final Approval\", \"status\": \"pending\" }\n  ]\n}" 
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"underwriting\",\n  \"milestones\": [\n    { \"name\": \"Application Submitted\", \"status\": \"completed\" },\n    { \"name\": \"Documentation Review\", \"status\": \"completed\" },\n    { \"name\": \"Underwriting\", \"status\": \"in_progress\" },\n    { \"name\": \"Final Approval\", \"status\": \"pending\" }\n  ]\n}"
             }
+          }
+        },
+        {
+          "name": "Generate Pre-Approval",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/loans/{{loanId}}/preapproval"
           }
         }
       ]
@@ -222,59 +241,303 @@
       "name": "Users",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
       "item": [
-        { "name": "Me", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } }
+        {
+          "name": "Register Push Token (Public)",
+          "auth": { "type": "noauth" },
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/push-token",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"expoPushToken\": \"ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]\"\n}"
+            }
+          }
+        },
+        { "name": "Get Me", "request": { "method": "GET", "url": "{{baseUrl}}/users/me" } },
+        {
+          "name": "Update Me",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe Updated\",\n  \"phone\": \"5559876543\",\n  \"title\": \"Senior Loan Officer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Upload Profile Picture",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users/profile-picture",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=20&role=borrower&active=true&q=jane",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "role", "value": "borrower" },
+                { "key": "active", "value": "true" },
+                { "key": "q", "value": "jane" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/users",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"secret123\",\n  \"role\": \"borrower\",\n  \"phone\": \"5551234567\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get User by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Update User (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        }
       ]
     },
     {
       "name": "Encompass Integration",
+      "description": "Encompass LOS integration endpoints.\n\nAuth: OAuth 2.0 (Resource Owner Password Credentials for lenders, Client Credentials for ISV partners).\nRef: https://developer.icemortgagetechnology.com/developer-connect/docs/authentication",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
       "item": [
-        { 
-          "name": "Sync Loan", 
-          "request": { 
-            "method": "POST", 
-            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync" 
-          } 
-        },
-        { 
-          "name": "Get Loan Contacts", 
-          "request": { 
-            "method": "GET", 
-            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/contacts" 
-          } 
-        },
-        { 
-          "name": "Get Loan Messages", 
-          "request": { 
-            "method": "GET", 
-            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages" 
-          } 
+        {
+          "name": "Token Management",
+          "item": [
+            {
+              "name": "Get Encompass Token",
+              "request": { "method": "GET", "url": "{{baseUrl}}/encompass/encompassToken" }
+            },
+            {
+              "name": "Introspect Encompass Token (Admin)",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/token/introspect",
+                "description": "Check whether the cached Encompass access token is still active. Returns token metadata including expiry, username, and instance ID. Admin only."
+              }
+            },
+            {
+              "name": "Revoke Encompass Token (Admin)",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/token/revoke",
+                "description": "Revoke the cached Encompass access token and clear the local cache. Useful for security rotation. Admin only."
+              }
+            }
+          ]
         },
         {
-          "name": "Send Message",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"recipient\": \"{{userId}}\",\n  \"messageType\": \"text\",\n  \"content\": \"Hi, I have a question about my loan application.\"\n}"
+          "name": "Connection",
+          "item": [
+            {
+              "name": "Test Connection",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/test-connection",
+                "description": "Verify server can connect to Encompass API. Checks configuration, authentication, and API connectivity."
+              }
             }
-          }
+          ]
         },
-        { 
-          "name": "Mark Message Read", 
-          "request": { 
-            "method": "POST", 
-            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages/{{messageId}}/read" 
-          } 
+        {
+          "name": "Loan Operations",
+          "item": [
+            {
+              "name": "Sync Loan from Encompass",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync",
+                "description": "Fetch and sync loan status, milestones, and contacts from Encompass LOS."
+              }
+            },
+            {
+              "name": "Link Loan to Encompass",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/link",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"encompassLoanId\": \"12345678-1234-1234-1234-123456789012\"\n}"
+                },
+                "description": "Associate a FAHM loan with an Encompass loan GUID. LO/Admin only."
+              }
+            },
+            {
+              "name": "Unlink Loan from Encompass (Admin)",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/unlink",
+                "description": "Remove the Encompass association from a FAHM loan. Admin only."
+              }
+            },
+            {
+              "name": "Update Loan Status in Encompass",
+              "request": {
+                "method": "PATCH",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/status",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"underwriting\",\n  \"milestones\": [\n    { \"name\": \"Application Submitted\", \"status\": \"completed\" },\n    { \"name\": \"Underwriting\", \"status\": \"in_progress\" }\n  ]\n}"
+                },
+                "description": "Push loan status and milestone updates to Encompass. LO/Admin only."
+              }
+            },
+            {
+              "name": "Get Sync History",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync-history",
+                "description": "View sync log history for debugging and auditing. LO/Admin only."
+              }
+            }
+          ]
         },
-        { 
-          "name": "Get Sync History", 
-          "request": { 
-            "method": "GET", 
-            "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync-history" 
-          } 
+        {
+          "name": "Contacts",
+          "item": [
+            {
+              "name": "Get Loan Contacts",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/contacts",
+                "description": "Retrieve all assigned contacts for a loan (Loan Officer, Processor, Underwriter, Closer)."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Messages",
+          "item": [
+            {
+              "name": "Get Loan Messages",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages",
+                "description": "Retrieve secure in-app messages between borrowers and FAHM contacts."
+              }
+            },
+            {
+              "name": "Send Message",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Hi, I have a question about my loan application.\",\n  \"recipientId\": \"{{userId}}\",\n  \"messageType\": \"text\",\n  \"metadata\": {}\n}"
+                },
+                "description": "Send secure message to borrower or loan team. Messages are auto-logged to Encompass for compliance."
+              }
+            },
+            {
+              "name": "Mark Message Read",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/messages/{{messageId}}/read",
+                "description": "Mark a loan message as read by the recipient."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Documents",
+          "item": [
+            {
+              "name": "Get Encompass Documents",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents",
+                "description": "Retrieve list of documents attached to the loan in Encompass eFolder."
+              }
+            },
+            {
+              "name": "Upload Document to Encompass",
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"base64Content\": \"JVBERi0xLjQK...\",\n  \"title\": \"W2 Form 2024\",\n  \"documentType\": \"Income\",\n  \"mimeType\": \"application/pdf\"\n}"
+                },
+                "description": "Upload a document to the loan in Encompass eFolder. Uses two-step upload (create metadata, then upload content)."
+              }
+            },
+            {
+              "name": "Download Encompass Document",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents/{{attachmentId}}/download",
+                "description": "Download a specific document from Encompass eFolder."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Webhook",
+          "item": [
+            {
+              "name": "Encompass Webhook",
+              "auth": { "type": "noauth" },
+              "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/encompass/webhook",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "x-encompass-signature", "value": "{{webhookSignature}}", "description": "HMAC-SHA256 signature (optional, validated if ENCOMPASS_WEBHOOK_SECRET is configured)" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"eventType\": \"loan.milestone.updated\",\n  \"resourceType\": \"loan\",\n  \"resourceId\": \"12345678-1234-1234-1234-123456789012\",\n  \"data\": {\n    \"status\": \"underwriting\"\n  }\n}"
+                },
+                "description": "Receive real-time updates from Encompass. Supports: loan.milestone.updated, loan.status.changed, loan.contacts.updated."
+              }
+            }
+          ]
         }
       ]
     },
@@ -672,6 +935,21 @@
     {
       "name": "Document Upload",
       "item": [
+        {
+          "name": "Get Presigned Upload URL",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/document-uploads/presign",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"documentType\": \"paystub\",\n  \"mimeType\": \"application/pdf\",\n  \"fileName\": \"paystub_jan_2026.pdf\",\n  \"fileSize\": 245760\n}"
+            }
+          }
+        },
         {
           "name": "Upload Documents to Loan",
           "request": {
@@ -2481,6 +2759,369 @@
               ]
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get My Messages",
+          "request": { "method": "GET", "url": "{{baseUrl}}/messages/my-messages" }
+        },
+        {
+          "name": "Get Messages for Loan",
+          "request": { "method": "GET", "url": "{{baseUrl}}/messages/loan/{{loanId}}" }
+        },
+        {
+          "name": "Get Message by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/messages/{{messageId}}" }
+        },
+        {
+          "name": "Create Message",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/messages",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"recipientId\": \"{{userId}}\",\n  \"content\": \"Hello, I have a question about my loan.\",\n  \"messageType\": \"text\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mark Message as Read",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/messages/{{messageId}}/read" }
+        },
+        {
+          "name": "Delete Message",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/messages/{{messageId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Menus",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get All Menus",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menus" }
+        },
+        {
+          "name": "Get Menu Roles (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menus/roles" }
+        },
+        {
+          "name": "Get Grouped Menus",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menus/grouped" }
+        },
+        {
+          "name": "Get Menu Versions (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menus/versions" }
+        },
+        {
+          "name": "Get Menu by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menus/{{menuId}}" }
+        },
+        {
+          "name": "Get Menu by Alias",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menus/alias/{{menuAlias}}" }
+        },
+        {
+          "name": "Create Menu (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/menus",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"New Menu Item\",\n  \"alias\": \"new-menu\",\n  \"icon\": \"home\",\n  \"route\": \"/new-menu\",\n  \"order\": 10,\n  \"isVisible\": true,\n  \"roles\": [\"admin\", \"loan_officer_retail\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Menu (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/menus/{{menuId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Menu Item\",\n  \"icon\": \"settings\",\n  \"order\": 5,\n  \"isVisible\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Menu Visibility (Admin)",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/menus/{{menuId}}/visibility" }
+        },
+        {
+          "name": "Delete Menu (Admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/menus/{{menuId}}" }
+        },
+        {
+          "name": "Restore Menu Version (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/menus/restore/{{menuVersion}}" }
+        },
+        {
+          "name": "Reset Menus to Defaults (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/menus/reset" }
+        }
+      ]
+    },
+    {
+      "name": "Menu Config",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get Menu Configuration",
+          "request": { "method": "GET", "url": "{{baseUrl}}/menu-config" }
+        },
+        {
+          "name": "Replace Menu Configuration (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/menu-config",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"menus\": [\n    {\n      \"title\": \"Dashboard\",\n      \"alias\": \"dashboard\",\n      \"icon\": \"home\",\n      \"route\": \"/dashboard\",\n      \"order\": 1,\n      \"isVisible\": true,\n      \"roles\": [\"admin\", \"loan_officer_retail\", \"borrower\"]\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles (Admin)",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "List All Roles",
+          "request": { "method": "GET", "url": "{{baseUrl}}/roles" }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/roles",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Custom Role\",\n  \"slug\": \"custom_role\",\n  \"description\": \"A custom role with specific capabilities\",\n  \"capabilities\": [\"{{capabilityId}}\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/roles/{{roleId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Role\",\n  \"description\": \"Updated description\",\n  \"capabilities\": [\"{{capabilityId}}\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/roles/{{roleId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Capabilities (Admin)",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "List All Capabilities",
+          "request": { "method": "GET", "url": "{{baseUrl}}/capabilities" }
+        },
+        {
+          "name": "Get Capability by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/capabilities/{{capabilityId}}" }
+        },
+        {
+          "name": "Create Capability",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/capabilities",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"dashboard:view\",\n  \"description\": \"Ability to view dashboard reports\",\n  \"category\": \"dashboard\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Capability",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/capabilities/{{capabilityId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"dashboard:manage\",\n  \"description\": \"Ability to manage dashboard reports\",\n  \"category\": \"dashboard\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Capability",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/capabilities/{{capabilityId}}" }
+        }
+      ]
+    },
+    {
+      "name": "CMS",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get Dashboard Screen",
+          "request": { "method": "GET", "url": "{{baseUrl}}/cms/screens/dashboard" }
+        },
+        {
+          "name": "List All Screens",
+          "request": { "method": "GET", "url": "{{baseUrl}}/cms/screens" }
+        },
+        {
+          "name": "Get Screen by Slug",
+          "request": { "method": "GET", "url": "{{baseUrl}}/cms/screens/{{screenSlug}}" }
+        },
+        {
+          "name": "Create Screen (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/cms/screens",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"new-screen\",\n  \"title\": \"New Screen\",\n  \"description\": \"A new CMS screen\",\n  \"components\": [],\n  \"roles\": [\"admin\", \"loan_officer_retail\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Screen (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/cms/screens/{{screenSlug}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Screen Title\",\n  \"components\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "Publish Screen (Admin)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/cms/screens/{{screenSlug}}/publish" }
+        },
+        {
+          "name": "List Navigation Configs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/cms/navigation-configs" }
+        },
+        {
+          "name": "Upsert Navigation Config (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/cms/navigation-configs",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"borrower\",\n  \"navigation\": [\n    { \"label\": \"Dashboard\", \"route\": \"/dashboard\", \"icon\": \"home\" },\n    { \"label\": \"My Loans\", \"route\": \"/loans\", \"icon\": \"file-text\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "List Feature Flags",
+          "request": { "method": "GET", "url": "{{baseUrl}}/cms/feature-flags" }
+        },
+        {
+          "name": "Upsert Feature Flags (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/cms/feature-flags",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flags\": [\n    { \"key\": \"enable_chatbot\", \"enabled\": true, \"roles\": [\"borrower\"] },\n    { \"key\": \"enable_dark_mode\", \"enabled\": false, \"roles\": [] }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Toggle Feature Flag (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/cms/feature-flags/{{featureFlagKey}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Component Registry",
+          "request": { "method": "GET", "url": "{{baseUrl}}/cms/component-registry" }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Get Consent Audit Logs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/audit-logs/consent" }
+        },
+        {
+          "name": "Get CRM Audit Logs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/audit-logs/crm" }
+        },
+        {
+          "name": "Get Credit Audit Logs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/audit-logs/credit" }
+        }
+      ]
+    },
+    {
+      "name": "Content Updates (WebSocket)",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Broadcast Content Update (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/content-updates/notify",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"content_updated\",\n  \"screenId\": \"{{screenSlug}}\",\n  \"roles\": [\"borrower\", \"loan_officer_retail\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Broadcast Screen Updated (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/content-updates/screen-updated",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"screenId\": \"{{screenSlug}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Broadcast Menu Updated (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/content-updates/menu-updated"
+          }
+        },
+        {
+          "name": "Get WebSocket Status (Admin)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/content-updates/status" }
         }
       ]
     },

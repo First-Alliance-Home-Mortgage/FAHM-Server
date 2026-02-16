@@ -5,7 +5,7 @@ const encompassSyncLogSchema = new mongoose.Schema(
     loan: { type: mongoose.Schema.Types.ObjectId, ref: 'LoanApplication' },
     syncType: {
       type: String,
-      enum: ['status', 'milestones', 'contacts', 'documents', 'full'],
+      enum: ['status', 'milestones', 'contacts', 'documents', 'full', 'link', 'unlink', 'webhook'],
       required: true,
     },
     direction: {

@@ -1,11 +1,20 @@
 const axios = require('axios');
+const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { integrations } = require('../config/env');
 
 /**
  * Encompass API Service
  * Handles integration with Encompass LOS via Partner Connect API
+ *
+ * Auth reference: https://developer.icemortgagetechnology.com/developer-connect/docs/authentication
+ *
+ * Supported grant types:
+ *  - "password"             (Resource Owner Password Credentials – for lenders)
+ *  - "client_credentials"   (for ISV partners only)
  */
+
+const TOKEN_SAFETY_MARGIN_MS = 5 * 60 * 1000; // Re-authenticate 5 min before expiry
 
 class EncompassService {
   constructor() {
@@ -14,78 +23,216 @@ class EncompassService {
     this.tokenExpiry = null;
   }
 
+  // ───────────────────────────────────────────────────────────────
+  //  Authentication
+  // ───────────────────────────────────────────────────────────────
+
   /**
    * Get access token for Encompass API
-   * In production, implement OAuth 2.0 flow
+   * Supports both "password" (lender) and "client_credentials" (ISV) grant types.
+   * Tokens are cached and refreshed 5 minutes before expiry.
    */
   async getAccessToken() {
-    // Use cached token if valid
     if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
       return this.accessToken;
     }
-    try {
-      const clientId = integrations.encompassClientId;
-      const clientSecret = integrations.encompassClientSecret;
-      const instanceId = integrations.encompassInstanceId;
-      if (!clientId || !clientSecret || !instanceId) {
-        throw new Error('Missing Encompass OAuth credentials or instance ID');
+
+    const clientId = integrations.encompassClientId;
+    const clientSecret = integrations.encompassClientSecret;
+    const instanceId = integrations.encompassInstanceId;
+    const grantType = integrations.encompassGrantType || 'password';
+
+    if (!clientId || !clientSecret) {
+      throw new Error('Missing Encompass OAuth credentials (client_id / client_secret)');
+    }
+
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const params = new URLSearchParams();
+
+    if (grantType === 'password') {
+      // Resource Owner Password Credentials – for lenders
+      const username = integrations.encompassUsername;
+      const password = integrations.encompassPassword;
+
+      if (!username || !password || !instanceId) {
+        throw new Error(
+          'Missing Encompass credentials for password grant (ENCOMPASS_USERNAME, ENCOMPASS_PASSWORD, ENCOMPASS_INSTANCE_ID)'
+        );
       }
-      const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-      const params = new URLSearchParams();
+
+      params.append('grant_type', 'password');
+      params.append('username', `${username}@encompass:${instanceId}`);
+      params.append('password', password);
+    } else if (grantType === 'client_credentials') {
+      // Client Credentials – ISV partners only
+      if (!instanceId) {
+        throw new Error('Missing ENCOMPASS_INSTANCE_ID for client_credentials grant');
+      }
+
       params.append('grant_type', 'client_credentials');
       params.append('instance_id', instanceId);
       params.append('scope', 'lp');
+    } else {
+      throw new Error(`Unsupported Encompass grant type: ${grantType}`);
+    }
 
+    try {
       const response = await axios.post(
         `${this.baseUrl}/oauth2/v1/token`,
         params,
         {
           headers: {
-            'Authorization': `Basic ${auth}`,
+            Authorization: `Basic ${auth}`,
             'Content-Type': 'application/x-www-form-urlencoded',
           },
         }
       );
 
       this.accessToken = response.data.access_token;
-      this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
+
+      // Cache token with safety margin.
+      // Encompass tokens are active for up to 30 min but expire early
+      // if not used within 15 min. We refresh 5 min before expiry.
+      const expiresInMs = (response.data.expires_in || 1800) * 1000;
+      this.tokenExpiry = Date.now() + expiresInMs - TOKEN_SAFETY_MARGIN_MS;
+
+      logger.info('Encompass access token obtained', { grantType });
       return this.accessToken;
     } catch (err) {
-      logger.error('Failed to get Encompass access token', { error: err.message });
-      throw new Error('Encompass authentication failed');
+      this.accessToken = null;
+      this.tokenExpiry = null;
+      const detail = this._parseApiError(err);
+      logger.error('Failed to get Encompass access token', { error: detail });
+      throw new Error(`Encompass authentication failed: ${detail}`);
     }
   }
 
-  async getStatus() {
+  /**
+   * Introspect a token to check if it's still active.
+   * Returns the introspection payload or null if the token is inactive.
+   */
+  async introspectToken(token) {
+    const clientId = integrations.encompassClientId;
+    const clientSecret = integrations.encompassClientSecret;
+
+    if (!clientId || !clientSecret) {
+      throw new Error('Missing Encompass OAuth credentials for introspection');
+    }
+
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const params = new URLSearchParams();
+    params.append('token', token || this.accessToken);
+
     try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(`${this.baseUrl}/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.post(
+        `${this.baseUrl}/oauth2/v1/token/introspection`,
+        params,
+        {
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
       return response.data;
     } catch (err) {
-      logger.error('Failed to fetch Encompass status', { error: err.message });
+      logger.error('Token introspection failed', { error: this._parseApiError(err) });
+      return null;
+    }
+  }
+
+  /**
+   * Revoke the current access token.
+   * Returns true on success.
+   */
+  async revokeToken() {
+    if (!this.accessToken) return true;
+
+    const clientId = integrations.encompassClientId;
+    const clientSecret = integrations.encompassClientSecret;
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const params = new URLSearchParams();
+    params.append('token', this.accessToken);
+
+    try {
+      await axios.post(
+        `${this.baseUrl}/oauth2/v1/token/revocation`,
+        params,
+        {
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      this.accessToken = null;
+      this.tokenExpiry = null;
+      logger.info('Encompass access token revoked');
+      return true;
+    } catch (err) {
+      logger.error('Token revocation failed', { error: this._parseApiError(err) });
+      return false;
+    }
+  }
+
+  /**
+   * Force-clear the cached token so the next API call re-authenticates.
+   */
+  clearToken() {
+    this.accessToken = null;
+    this.tokenExpiry = null;
+  }
+
+  /**
+   * Build Authorization header for Encompass API calls.
+   */
+  async _authHeaders() {
+    const token = await this.getAccessToken();
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  // ───────────────────────────────────────────────────────────────
+  //  Status / Connectivity
+  // ───────────────────────────────────────────────────────────────
+
+  async getStatus() {
+    try {
+      const headers = await this._authHeaders();
+      const response = await axios.get(`${this.baseUrl}/encompass/v3/loans`, {
+        headers,
+        params: { limit: 1 },
+      });
+      return { ok: true, loanCount: response.data?.length ?? 0 };
+    } catch (err) {
+      logger.error('Failed to fetch Encompass status', { error: this._parseApiError(err) });
       throw err;
     }
   }
+
+  // ───────────────────────────────────────────────────────────────
+  //  Loan Operations
+  // ───────────────────────────────────────────────────────────────
 
   /**
    * Fetch loan details from Encompass
    */
   async getLoanDetails(encompassLoanId) {
     try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(`${this.baseUrl}/encompass/v3/loans/${encompassLoanId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const headers = await this._authHeaders();
+      const response = await axios.get(
+        `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}`,
+        { headers }
+      );
       return response.data;
     } catch (err) {
       logger.error('Failed to fetch Encompass loan details', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
-      throw err;
+      throw this._wrapError(err, 'Failed to fetch loan details from Encompass');
     }
   }
 
@@ -94,16 +241,16 @@ class EncompassService {
    */
   async getLoanMilestones(encompassLoanId) {
     try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(`${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/milestones`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const headers = await this._authHeaders();
+      const response = await axios.get(
+        `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/milestones`,
+        { headers }
+      );
       return this.transformMilestones(response.data);
     } catch (err) {
       logger.error('Failed to fetch Encompass milestones', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
       return [];
     }
@@ -114,16 +261,16 @@ class EncompassService {
    */
   async getLoanContacts(encompassLoanId) {
     try {
-      const token = await this.getAccessToken();
-      const response = await axios.get(`${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/associates`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const headers = await this._authHeaders();
+      const response = await axios.get(
+        `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/associates`,
+        { headers }
+      );
       return this.transformContacts(response.data);
     } catch (err) {
       logger.error('Failed to fetch Encompass contacts', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
       return [];
     }
@@ -134,52 +281,74 @@ class EncompassService {
    */
   async updateLoanStatus(encompassLoanId, status, milestones) {
     try {
-      const token = await this.getAccessToken();
+      const headers = await this._authHeaders();
       await axios.patch(
         `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}`,
-        {
-          loanStatus: status,
-          milestones: milestones || [],
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { loanStatus: status, milestones: milestones || [] },
+        { headers }
       );
-
       return true;
     } catch (err) {
       logger.error('Failed to update Encompass loan status', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
-      throw err;
+      throw this._wrapError(err, 'Failed to update loan status in Encompass');
     }
   }
 
+  // ───────────────────────────────────────────────────────────────
+  //  Document / eFolder Operations
+  // ───────────────────────────────────────────────────────────────
+
   /**
-   * Upload document to Encompass
+   * Upload document to Encompass eFolder.
+   *
+   * Encompass eFolder upload is a two-step process:
+   *  1. Create the attachment metadata (POST /attachments)
+   *  2. Upload the file content (PUT /attachments/{id}/upload)
    */
   async uploadDocument(encompassLoanId, documentData) {
     try {
-      const token = await this.getAccessToken();
-      const response = await axios.post(
+      const headers = await this._authHeaders();
+
+      // Step 1 – Create attachment metadata
+      const metaResponse = await axios.post(
         `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/attachments`,
-        documentData,
+        {
+          title: documentData.title || 'Uploaded Document',
+          document: { entityType: documentData.documentType || 'Other' },
+        },
+        { headers: { ...headers, 'Content-Type': 'application/json' } }
+      );
+
+      const attachmentId =
+        metaResponse.data?.attachmentId || metaResponse.data?.id;
+
+      if (!attachmentId) {
+        throw new Error('Encompass did not return an attachmentId');
+      }
+
+      // Step 2 – Upload file content
+      const fileBuffer = Buffer.from(documentData.file.content, 'base64');
+      await axios.put(
+        `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/attachments/${attachmentId}`,
+        fileBuffer,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            ...headers,
+            'Content-Type': documentData.file.contentType || 'application/pdf',
           },
         }
       );
 
-      return response.data;
+      return { attachmentId, title: documentData.title };
     } catch (err) {
       logger.error('Failed to upload document to Encompass', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
-      throw err;
+      throw this._wrapError(err, 'Failed to upload document to Encompass');
     }
   }
 
@@ -188,19 +357,16 @@ class EncompassService {
    */
   async getDocuments(encompassLoanId) {
     try {
-      const token = await this.getAccessToken();
+      const headers = await this._authHeaders();
       const response = await axios.get(
         `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/attachments`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers }
       );
-
       return this.transformDocuments(response.data);
     } catch (err) {
       logger.error('Failed to fetch Encompass documents', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
       return [];
     }
@@ -211,13 +377,10 @@ class EncompassService {
    */
   async downloadDocument(encompassLoanId, attachmentId) {
     try {
-      const token = await this.getAccessToken();
+      const headers = await this._authHeaders();
       const response = await axios.get(
         `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/attachments/${attachmentId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: 'arraybuffer',
-        }
+        { headers, responseType: 'arraybuffer' }
       );
 
       return {
@@ -229,30 +392,22 @@ class EncompassService {
       logger.error('Failed to download Encompass document', {
         loanId: encompassLoanId,
         attachmentId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
-      throw err;
+      throw this._wrapError(err, 'Failed to download document from Encompass');
     }
   }
 
-  /**
-   * Verify webhook signature from Encompass
-   */
-  verifyWebhookSignature(payload, signature, secret) {
-    const crypto = require('crypto');
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(JSON.stringify(payload))
-      .digest('hex');
-    return signature === expectedSignature;
-  }
+  // ───────────────────────────────────────────────────────────────
+  //  Messaging
+  // ───────────────────────────────────────────────────────────────
 
   /**
    * Send message/note to Encompass
    */
   async sendMessage(encompassLoanId, message) {
     try {
-      const token = await this.getAccessToken();
+      const headers = await this._authHeaders();
       await axios.post(
         `${this.baseUrl}/encompass/v3/loans/${encompassLoanId}/notes`,
         {
@@ -260,24 +415,40 @@ class EncompassService {
           dateCreated: message.createdAt || new Date().toISOString(),
           createdBy: message.senderName || 'FAHM App',
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers }
       );
-
       return true;
     } catch (err) {
       logger.error('Failed to send message to Encompass', {
         loanId: encompassLoanId,
-        error: err.message,
+        error: this._parseApiError(err),
       });
       return false;
     }
   }
 
+  // ───────────────────────────────────────────────────────────────
+  //  Webhook Verification
+  // ───────────────────────────────────────────────────────────────
+
   /**
-   * Transform Encompass milestones to FAHM format
+   * Verify webhook signature from Encompass (HMAC-SHA256)
    */
+  verifyWebhookSignature(payload, signature, secret) {
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(JSON.stringify(payload))
+      .digest('hex');
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────
+  //  Data Transformers
+  // ───────────────────────────────────────────────────────────────
+
   transformMilestones(encompassMilestones) {
     if (!Array.isArray(encompassMilestones)) return [];
 
@@ -288,9 +459,6 @@ class EncompassService {
     }));
   }
 
-  /**
-   * Transform Encompass contacts to FAHM format
-   */
   transformContacts(encompassContacts) {
     if (!Array.isArray(encompassContacts)) return [];
 
@@ -304,9 +472,6 @@ class EncompassService {
     }));
   }
 
-  /**
-   * Transform Encompass documents to FAHM format
-   */
   transformDocuments(encompassDocuments) {
     if (!Array.isArray(encompassDocuments)) return [];
 
@@ -322,9 +487,6 @@ class EncompassService {
     }));
   }
 
-  /**
-   * Map Encompass milestone status to FAHM status
-   */
   mapMilestoneStatus(encompassStatus) {
     if (typeof encompassStatus === 'boolean') {
       return encompassStatus ? 'completed' : 'pending';
@@ -341,9 +503,6 @@ class EncompassService {
     return statusMap[encompassStatus?.toLowerCase()] || 'pending';
   }
 
-  /**
-   * Map Encompass contact role to FAHM role
-   */
   mapContactRole(encompassRole) {
     const roleMap = {
       'loan officer': 'loan_officer',
@@ -355,6 +514,38 @@ class EncompassService {
     };
 
     return roleMap[encompassRole?.toLowerCase()] || 'other';
+  }
+
+  // ───────────────────────────────────────────────────────────────
+  //  Error Helpers
+  // ───────────────────────────────────────────────────────────────
+
+  /**
+   * Extract a human-readable error message from an Axios error / Encompass response.
+   */
+  _parseApiError(err) {
+    if (err.response) {
+      const data = err.response.data;
+      // Encompass errors may come as { summary, details, errorCode } or plain string
+      if (typeof data === 'object' && data !== null) {
+        return data.summary || data.message || data.error || JSON.stringify(data);
+      }
+      if (typeof data === 'string' && data.length < 500) {
+        return data;
+      }
+      return `HTTP ${err.response.status}`;
+    }
+    return err.message;
+  }
+
+  /**
+   * Wrap an Axios error with a user-friendly message while preserving status code.
+   */
+  _wrapError(err, fallbackMessage) {
+    const detail = this._parseApiError(err);
+    const wrapped = new Error(`${fallbackMessage}: ${detail}`);
+    wrapped.status = err.response?.status || 500;
+    return wrapped;
   }
 }
 

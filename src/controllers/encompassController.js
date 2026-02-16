@@ -22,6 +22,35 @@ exports.encompassToken = async (req, res, next) => {
 };
 
 /**
+ * Introspect current Encompass token
+ */
+exports.introspectToken = async (req, res, next) => {
+  try {
+    const result = await encompassService.introspectToken();
+    if (!result) {
+      return res.status(503).json({ active: false, message: 'Token introspection failed' });
+    }
+    return res.json(result);
+  } catch (err) {
+    logger.error('Token introspection failed', { error: err.message });
+    return next(err);
+  }
+};
+
+/**
+ * Revoke current Encompass token
+ */
+exports.revokeToken = async (req, res, next) => {
+  try {
+    const revoked = await encompassService.revokeToken();
+    return res.json({ revoked, message: revoked ? 'Token revoked' : 'Revocation failed' });
+  } catch (err) {
+    logger.error('Token revocation failed', { error: err.message });
+    return next(err);
+  }
+};
+
+/**
  * Test Encompass connection
  */
 exports.testConnection = async (req, res, _next) => {

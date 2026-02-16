@@ -9,7 +9,8 @@
       "Bash(do echo \"=== $f ===\")",
       "Bash(done)",
       "Bash(for:*)",
-      "Bash(npx jest --forceExit --detectOpenHandles)"
+      "Bash(npx jest --forceExit --detectOpenHandles)",
+      "WebFetch(domain:developer.icemortgagetechnology.com)"
     ]
   }
 }

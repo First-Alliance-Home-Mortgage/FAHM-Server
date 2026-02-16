@@ -114,7 +114,11 @@ exports.listUsers = async (req, res, next) => {
     const limit = req.query.limit || 20;
     const sort = req.query.sort || '-createdAt';
     const filter = {};
-    if (role) filter.role = role;
+    if (role) {
+      const roleDoc = await Role.findOne({ slug: role });
+      if (roleDoc) filter.role = roleDoc._id;
+      else return res.json({ users: [], page, pageSize: limit, total: 0 });
+    }
     if (typeof active === 'boolean') filter.isActive = active;
     if (q) {
       const safeQ = escapeRegex(q);
