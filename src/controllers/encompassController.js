@@ -55,7 +55,6 @@ exports.revokeToken = async (req, res, next) => {
  */
 exports.testConnection = async (req, res, _next) => {
   try {
-    console.log(req.user.role.slug);
     const startTime = Date.now();
     const results = {
       timestamp: new Date().toISOString(),

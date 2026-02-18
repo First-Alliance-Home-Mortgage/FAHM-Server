@@ -275,7 +275,7 @@ exports.statusWebhook = async (req, res, _next) => {
  * GET /api/v1/sms/conversation/:phone
  * Access: Authenticated users
  */
-exports.getConversation = async (req, res, _next) => {
+exports.getConversation = async (req, res, next) => {
   try {
     const { phone } = req.params;
     const { limit = 50 } = req.query;
@@ -304,7 +304,7 @@ exports.getConversation = async (req, res, _next) => {
  * GET /api/v1/sms/loan/:loanId
  * Access: Authenticated users
  */
-exports.getLoanMessages = async (req, res, _next) => {
+exports.getLoanMessages = async (req, res, next) => {
   try {
     const { loanId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -354,7 +354,7 @@ exports.getLoanMessages = async (req, res, _next) => {
  * GET /api/v1/sms/my-messages
  * Access: Authenticated users
  */
-exports.getMyMessages = async (req, res, _next) => {
+exports.getMyMessages = async (req, res, next) => {
   try {
     const { page = 1, limit = 50, direction } = req.query;
 
@@ -404,7 +404,7 @@ exports.getMyMessages = async (req, res, _next) => {
  * PATCH /api/v1/sms/:messageId/read
  * Access: Authenticated users
  */
-exports.markAsRead = async (req, res, _next) => {
+exports.markAsRead = async (req, res, next) => {
   try {
     const { messageId } = req.params;
 
@@ -438,7 +438,7 @@ exports.markAsRead = async (req, res, _next) => {
  * GET /api/v1/sms/stats
  * Access: Loan Officers, Branch Managers, Admins
  */
-exports.getStats = async (req, res, _next) => {
+exports.getStats = async (req, res, next) => {
   try {
     const { startDate, endDate, loanId } = req.query;
 

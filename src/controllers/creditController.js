@@ -99,7 +99,7 @@ exports.requestCreditReport = async (req, res, next) => {
       await pullLog.save();
 
       // Notify loan officer
-      await this.notifyLoanOfficer(loan, borrower, creditReport);
+      await exports.notifyLoanOfficer(loan, borrower, creditReport);
 
       logger.info('Credit report requested successfully', {
         loanId,
@@ -302,7 +302,7 @@ exports.reissueCreditReport = async (req, res, next) => {
       // Notify loan officer
       const loan = await LoanApplication.findById(existingReport.loan);
       const borrower = await User.findById(existingReport.borrower);
-      await this.notifyLoanOfficer(loan, borrower, newReport);
+      await exports.notifyLoanOfficer(loan, borrower, newReport);
 
       logger.info('Credit report reissued successfully', {
         oldReportId: reportId,

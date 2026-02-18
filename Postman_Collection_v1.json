@@ -2952,7 +2952,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"New Menu Item\",\n  \"alias\": \"new-menu\",\n  \"icon\": \"home\",\n  \"route\": \"/new-menu\",\n  \"order\": 10,\n  \"isVisible\": true,\n  \"roles\": [\"admin\", \"loan_officer_retail\"]\n}"
+              "raw": "{\n  \"alias\": \"new-menu\",\n  \"label\": \"New Menu Item\",\n  \"icon\": \"home\",\n  \"route\": \"/(app)/(stack)/new-menu\",\n  \"type\": \"stack\",\n  \"slug\": \"new-menu\",\n  \"order\": 60,\n  \"visible\": true,\n  \"roles\": [\"admin\", \"branch_manager\", \"loan_officer_retail\", \"loan_officer_tpo\", \"broker\", \"realtor\", \"borrower\"]\n}"
             }
           }
         },
@@ -2964,13 +2964,21 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Menu Item\",\n  \"icon\": \"settings\",\n  \"order\": 5,\n  \"isVisible\": true\n}"
+              "raw": "{\n  \"alias\": \"updated-menu\",\n  \"label\": \"Updated Menu Item\",\n  \"icon\": \"settings\",\n  \"route\": \"/(app)/(stack)/updated-menu\",\n  \"type\": \"stack\",\n  \"slug\": \"updated-menu\",\n  \"order\": 5,\n  \"visible\": true,\n  \"roles\": [\"admin\", \"branch_manager\", \"loan_officer_retail\", \"loan_officer_tpo\", \"broker\", \"realtor\", \"borrower\"]\n}"
             }
           }
         },
         {
           "name": "Toggle Menu Visibility (Admin)",
-          "request": { "method": "PATCH", "url": "{{baseUrl}}/menus/{{menuId}}/visibility" }
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/menus/{{menuId}}/visibility",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visible\": true\n}"
+            }
+          }
         },
         {
           "name": "Delete Menu (Admin)",
@@ -3002,7 +3010,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"menus\": [\n    {\n      \"title\": \"Dashboard\",\n      \"alias\": \"dashboard\",\n      \"icon\": \"home\",\n      \"route\": \"/dashboard\",\n      \"order\": 1,\n      \"isVisible\": true,\n      \"roles\": [\"admin\", \"loan_officer_retail\", \"borrower\"]\n    }\n  ]\n}"
+              "raw": "{\n  \"menus\": [\n    {\n      \"alias\": \"dashboard\",\n      \"label\": \"Dashboard\",\n      \"icon\": \"home\",\n      \"route\": \"/(app)/(drawer)/(tabs)/index\",\n      \"type\": \"tab\",\n      \"slug\": \"home\",\n      \"order\": 1,\n      \"visible\": true,\n      \"roles\": [\"admin\", \"branch_manager\", \"loan_officer_retail\", \"loan_officer_tpo\", \"broker\", \"realtor\", \"borrower\"]\n    }\n  ]\n}"
             }
           }
         }

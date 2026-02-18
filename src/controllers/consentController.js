@@ -50,7 +50,7 @@ exports.requestConsent = async (req, res, next) => {
     expiresAt.setDate(expiresAt.getDate() + (expirationDays || 365));
 
     // Generate consent text
-    const consentText = this.generateConsentText(req.user, dataScope, purpose);
+    const consentText = exports.generateConsentText(req.user, dataScope, purpose);
 
     // Create consent request
     const consent = await ConsentManagement.create({

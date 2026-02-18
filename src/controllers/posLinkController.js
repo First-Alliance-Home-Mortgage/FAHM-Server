@@ -27,6 +27,7 @@ exports.generateLink = async (req, res, next) => {
       source,
       expirationMinutes,
       branding,
+      returnUrl,
     } = req.body;
 
     const userId = req.user.userId;

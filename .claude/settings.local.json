@@ -10,7 +10,8 @@
       "Bash(done)",
       "Bash(for:*)",
       "Bash(npx jest --forceExit --detectOpenHandles)",
-      "WebFetch(domain:developer.icemortgagetechnology.com)"
+      "WebFetch(domain:developer.icemortgagetechnology.com)",
+      "Read(//c/Users/rrebucas/FAHM-Server/**)"
     ]
   }
 }
