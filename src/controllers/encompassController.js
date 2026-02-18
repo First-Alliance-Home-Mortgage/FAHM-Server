@@ -55,6 +55,7 @@ exports.revokeToken = async (req, res, next) => {
  */
 exports.testConnection = async (req, res, _next) => {
   try {
+    console.log(req.user.role.slug);
     const startTime = Date.now();
     const results = {
       timestamp: new Date().toISOString(),
@@ -704,6 +705,114 @@ exports.downloadDocument = async (req, res, next) => {
       loanId: req.params.id,
       attachmentId: req.params.attachmentId,
     });
+    return next(err);
+  }
+};
+
+/**
+ * Query the Encompass loan pipeline.
+ *
+ * Translates simple query parameters into ICE pipeline filter format
+ * and returns transformed, frontend-friendly results.
+ */
+exports.queryPipeline = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(createError(400, { errors: errors.array() }));
+    }
+
+    const {
+      loanFolder,
+      status,
+      loanOfficer,
+      borrowerName,
+      dateFrom,
+      dateTo,
+      sortField,
+      sortOrder,
+    } = req.query;
+    const start = parseInt(req.query.start, 10) || 0;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 25, 100);
+
+    // Build ICE filter from query params
+    const filter = encompassService.buildPipelineFilter({
+      loanFolder,
+      status,
+      loanOfficer,
+      borrowerName,
+      dateFrom,
+      dateTo,
+    });
+
+    // Build sort order
+    const sort = sortField
+      ? [{ canonicalName: sortField, order: sortOrder || 'desc' }]
+      : [{ canonicalName: 'Fields.4002', order: 'desc' }]; // Default: last modified desc
+
+    // Query Encompass pipeline
+    const rawItems = await encompassService.queryPipeline({
+      filter,
+      sortOrder: sort,
+      start,
+      limit,
+    });
+
+    // Transform ICE response into frontend-friendly shape
+    const items = encompassService.transformPipelineItems(rawItems);
+
+    // Batch-check which loans are already linked locally
+    const guids = items.map(item => item.loanGuid).filter(Boolean);
+    const linkedLoans = guids.length > 0
+      ? await LoanApplication.find(
+          { encompassLoanId: { $in: guids } },
+          { encompassLoanId: 1, _id: 1, status: 1 }
+        )
+      : [];
+    const linkedMap = new Map(linkedLoans.map(l => [l.encompassLoanId, { _id: l._id, status: l.status }]));
+
+    // Enrich items with local link status
+    const data = items.map(item => ({
+      ...item,
+      isLinkedLocally: linkedMap.has(item.loanGuid),
+      localLoanId: linkedMap.get(item.loanGuid)?._id || null,
+      localStatus: linkedMap.get(item.loanGuid)?.status || null,
+    }));
+
+    logger.info('Encompass pipeline queried', { count: data.length, start, limit, hasFilter: !!filter });
+
+    return res.json({
+      data,
+      total: data.length,
+      start,
+      limit,
+    });
+  } catch (err) {
+    logger.error('Failed to query Encompass pipeline', { error: err.message });
+    return next(err);
+  }
+};
+
+/**
+ * Get canonical field definitions available for pipeline queries.
+ * Returns the list of fields that can be used for filtering, sorting, and selection.
+ */
+exports.getPipelineCanonicalFields = async (req, res, next) => {
+  try {
+    const { canonicalNames, fieldIds } = req.query;
+
+    const options = {};
+    if (canonicalNames) {
+      options.canonicalNames = canonicalNames.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (fieldIds) {
+      options.fieldIds = fieldIds.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    const fields = await encompassService.getPipelineCanonicalFields(options);
+    return res.json({ data: fields, total: Array.isArray(fields) ? fields.length : 0 });
+  } catch (err) {
+    logger.error('Failed to get pipeline canonical fields', { error: err.message });
     return next(err);
   }
 };

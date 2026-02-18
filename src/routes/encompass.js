@@ -1,7 +1,8 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const { authenticate, authorize } = require('../middleware/auth');
 const encompassController = require('../controllers/encompassController');
+const encompassService = require('../services/encompassService');
 
 const router = express.Router();
 
@@ -164,6 +165,212 @@ router.get(
   authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'admin'] }),
   encompassController.testConnection
 );
+
+const validMilestones = encompassService.constructor.VALID_MILESTONES;
+
+const validatePipelineQuery = [
+  query('loanFolder').optional().isString().trim(),
+  query('status')
+    .optional()
+    .isString()
+    .trim()
+    .custom((value) => {
+      const statuses = value.split(',').map(s => s.trim()).filter(Boolean);
+      const invalid = statuses.filter(s => !validMilestones.includes(s));
+      if (invalid.length > 0) {
+        throw new Error(
+          `Invalid milestone(s): ${invalid.join(', ')}. Valid values: ${validMilestones.join(', ')}`
+        );
+      }
+      return true;
+    }),
+  query('loanOfficer').optional().isString().trim(),
+  query('borrowerName').optional().isString().trim(),
+  query('dateFrom').optional().isISO8601(),
+  query('dateTo').optional().isISO8601(),
+  query('start').optional().isInt({ min: 0 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('sortField').optional().isString().trim(),
+  query('sortOrder').optional().isIn(['asc', 'desc']),
+];
+
+/**
+ * @swagger
+ * /encompass/pipeline:
+ *   get:
+ *     summary: Query the Encompass loan pipeline
+ *     tags: [Encompass Integration]
+ *     description: >
+ *       Query the Encompass LOS pipeline with filters, sorting, and pagination.
+ *       Calls ICE POST /encompass/v3/loanPipeline under the hood and returns
+ *       transformed, frontend-friendly results with local link status.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: loanFolder
+ *         schema:
+ *           type: string
+ *         description: Encompass loan folder name (e.g. "My Pipeline")
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: >
+ *           Comma-separated Encompass milestone names.
+ *           Valid values: Started, Processing, Submittal, Underwriting,
+ *           Cond. Approval, Clear to Close, Closing, Funded, Purchased, Completion
+ *       - in: query
+ *         name: loanOfficer
+ *         schema:
+ *           type: string
+ *         description: Filter by loan officer name (contains match)
+ *       - in: query
+ *         name: borrowerName
+ *         schema:
+ *           type: string
+ *         description: Filter by borrower first or last name (contains match)
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Application date on or after (ISO 8601)
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Application date on or before (ISO 8601)
+ *       - in: query
+ *         name: start
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 25
+ *           maximum: 100
+ *         description: Page size
+ *       - in: query
+ *         name: sortField
+ *         schema:
+ *           type: string
+ *           default: Fields.4002
+ *         description: Encompass field ID to sort by (e.g. "Fields.4002" for last modified)
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Encompass pipeline results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       loanGuid:
+ *                         type: string
+ *                       loanNumber:
+ *                         type: string
+ *                       borrowerName:
+ *                         type: string
+ *                       loanAmount:
+ *                         type: number
+ *                       status:
+ *                         type: string
+ *                       loanOfficerName:
+ *                         type: string
+ *                       interestRate:
+ *                         type: number
+ *                       applicationDate:
+ *                         type: string
+ *                       estimatedClosingDate:
+ *                         type: string
+ *                       isLinkedLocally:
+ *                         type: boolean
+ *                       localLoanId:
+ *                         type: string
+ *                 total:
+ *                   type: integer
+ *                 start:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - requires LO, Branch Manager, or Admin role
+ */
+router.get(
+  '/pipeline',
+  validatePipelineQuery,
+  authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'branch_manager', 'admin'] }),
+  encompassController.queryPipeline
+);
+
+/**
+ * @swagger
+ * /encompass/pipeline/fields:
+ *   get:
+ *     summary: Get canonical field definitions for pipeline queries
+ *     tags: [Encompass Integration]
+ *     description: >
+ *       Returns the list of canonical fields available for filtering, sorting,
+ *       and field selection in Encompass pipeline queries.
+ *       Calls GET /encompass/v3/loanPipeline/canonicalFields on the ICE API.
+ *       Ref: https://developer.icemortgagetechnology.com/developer-connect/reference/get-canonical-names
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: canonicalNames
+ *         schema:
+ *           type: string
+ *         description: >
+ *           Comma-separated canonical names to filter by
+ *           (e.g. "Fields.4000,Fields.11,Loan.LoanFolder")
+ *       - in: query
+ *         name: fieldIds
+ *         schema:
+ *           type: string
+ *         description: Comma-separated field IDs to filter by
+ *     responses:
+ *       200:
+ *         description: Canonical field definitions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - requires LO, Branch Manager, or Admin role
+ */
+router.get(
+  '/pipeline/fields',
+  authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'branch_manager', 'admin'] }),
+  encompassController.getPipelineCanonicalFields
+);
+
 /**
  * @swagger
  * /encompass/loans/{id}/sync:

@@ -1,5 +1,5 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const { authenticate, authorize } = require('../middleware/auth');
 const loanController = require('../controllers/loanController');
 const preapprovalController = require('../controllers/preapprovalController');
@@ -9,28 +9,103 @@ const router = express.Router();
 
 router.use(authenticate);
 
+const validateListLoans = [
+  query('status').optional().isString().trim(),
+  query('source').optional().isIn(['retail', 'tpo']),
+  query('assignedOfficer').optional().isMongoId(),
+  query('q').optional().isString().trim(),
+  query('dateFrom').optional().isISO8601(),
+  query('dateTo').optional().isISO8601(),
+  query('page').optional().isInt({ min: 1 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('sort').optional().isString().trim(),
+];
+
 /**
  * @swagger
  * /loans:
  *   get:
- *     summary: List all loans
+ *     summary: List loans with filtering, pagination, and sorting
  *     tags: [Loans]
- *     description: Borrowers see only their own loans. Other roles see all loans.
+ *     description: >
+ *       Borrowers see only their own loans. Other roles see all loans.
+ *       Supports filtering by status, source, assigned officer, date range, and text search.
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Comma-separated statuses (e.g. "processing,underwriting")
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [retail, tpo]
+ *       - in: query
+ *         name: assignedOfficer
+ *         schema:
+ *           type: string
+ *         description: MongoDB ObjectId of the assigned loan officer
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search by borrower name, email, or property address
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter loans created on or after this date (ISO 8601)
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter loans created on or before this date (ISO 8601)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           default: "-createdAt"
+ *         description: Sort field with optional "-" prefix for descending (e.g. "-amount", "createdAt")
  *     responses:
  *       200:
- *         description: List of loans
+ *         description: Paginated list of loans
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/LoanApplication'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/LoanApplication'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
  *       401:
  *         description: Unauthorized
  */
-router.get('/', loanController.list);
+router.get('/', validateListLoans, loanController.list);
 
 /**
  * @swagger

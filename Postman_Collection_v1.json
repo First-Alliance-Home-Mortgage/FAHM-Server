@@ -15,9 +15,9 @@
     { "key": "baseUrl", "value": "{{rootUrl}}/api/v1" },
     { "key": "authToken", "value": "" },
     { "key": "refreshToken", "value": "" },
-    { "key": "name", "value": "Jane Doe" },
-    { "key": "email", "value": "jane@example.com" },
-    { "key": "password", "value": "secret123" },
+    { "key": "name", "value": "Admin User" },
+    { "key": "email", "value": "admin@fahmloans.com" },
+    { "key": "password", "value": "Password123!" },
     { "key": "role", "value": "borrower" },
     { "key": "phone", "value": "5551234567" },
     { "key": "loanId", "value": "" },
@@ -162,7 +162,29 @@
       "name": "Loans",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
       "item": [
-        { "name": "List Loans", "request": { "method": "GET", "url": "{{baseUrl}}/loans" } },
+        {
+          "name": "List Loans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/loans?page=1&limit=20&sort=-createdAt",
+              "host": ["{{baseUrl}}"],
+              "path": ["loans"],
+              "query": [
+                { "key": "status", "value": "processing,underwriting", "description": "Comma-separated statuses", "disabled": true },
+                { "key": "source", "value": "retail", "description": "Loan source: retail | tpo", "disabled": true },
+                { "key": "assignedOfficer", "value": "{{officerId}}", "description": "Officer MongoDB ObjectId", "disabled": true },
+                { "key": "q", "value": "", "description": "Search borrower name/email or property address", "disabled": true },
+                { "key": "dateFrom", "value": "2024-01-01", "description": "Created date >= (ISO 8601)", "disabled": true },
+                { "key": "dateTo", "value": "2025-12-31", "description": "Created date <= (ISO 8601)", "disabled": true },
+                { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "20", "description": "Page size, max 100 (default: 20)" },
+                { "key": "sort", "value": "-createdAt", "description": "Sort field, prefix - for desc (default: -createdAt)" }
+              ]
+            },
+            "description": "List loans with filtering, pagination, and sorting. Borrowers see only their own loans."
+          }
+        },
         {
           "name": "Create Loan",
           "request": {
@@ -377,6 +399,100 @@
                 "method": "GET",
                 "url": "{{baseUrl}}/encompass/test-connection",
                 "description": "Verify server can connect to Encompass API. Checks configuration, authentication, and API connectivity."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pipeline",
+          "item": [
+            {
+              "name": "Query Pipeline",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/encompass/pipeline?start=0&limit=25&sortField=Fields.4002&sortOrder=desc",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["encompass", "pipeline"],
+                  "query": [
+                    { "key": "loanFolder", "value": "My Pipeline", "description": "Encompass folder name", "disabled": true },
+                    { "key": "status", "value": "Processing", "description": "Comma-separated milestones: Started, Processing, Submittal, Underwriting, Cond. Approval, Clear to Close, Closing, Funded, Purchased, Completion", "disabled": true },
+                    { "key": "loanOfficer", "value": "", "description": "Loan officer name (contains match)", "disabled": true },
+                    { "key": "borrowerName", "value": "", "description": "Borrower first or last name (contains match)", "disabled": true },
+                    { "key": "dateFrom", "value": "2024-01-01", "description": "Application date >= (ISO 8601)", "disabled": true },
+                    { "key": "dateTo", "value": "2025-12-31", "description": "Application date <= (ISO 8601)", "disabled": true },
+                    { "key": "start", "value": "0", "description": "Pagination offset (default: 0)" },
+                    { "key": "limit", "value": "25", "description": "Page size, max 100 (default: 25)" },
+                    { "key": "sortField", "value": "Fields.4002", "description": "Encompass field ID to sort by (default: Fields.4002 = last modified)" },
+                    { "key": "sortOrder", "value": "desc", "description": "Sort direction: asc | desc (default: desc)" }
+                  ]
+                },
+                "description": "Query the Encompass LOS loan pipeline with filters, sorting, and pagination. Returns transformed results with local link status. Requires LO, Branch Manager, or Admin role."
+              }
+            },
+            {
+              "name": "Query Pipeline - By Status",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/encompass/pipeline?status=Processing&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["encompass", "pipeline"],
+                  "query": [
+                    { "key": "status", "value": "Processing" },
+                    { "key": "limit", "value": "10" }
+                  ]
+                },
+                "description": "Query pipeline filtered by milestone status."
+              }
+            },
+            {
+              "name": "Query Pipeline - By Borrower Name",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/encompass/pipeline?borrowerName=Smith&limit=25",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["encompass", "pipeline"],
+                  "query": [
+                    { "key": "borrowerName", "value": "Smith" },
+                    { "key": "limit", "value": "25" }
+                  ]
+                },
+                "description": "Search pipeline by borrower name."
+              }
+            },
+            {
+              "name": "Query Pipeline - By Loan Officer",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/encompass/pipeline?loanOfficer=Jane&status=Processing,Underwriting&limit=25",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["encompass", "pipeline"],
+                  "query": [
+                    { "key": "loanOfficer", "value": "Jane" },
+                    { "key": "status", "value": "Processing,Underwriting" },
+                    { "key": "limit", "value": "25" }
+                  ]
+                },
+                "description": "Query pipeline filtered by loan officer and multiple statuses."
+              }
+            },
+            {
+              "name": "Get Pipeline Canonical Fields",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/encompass/pipeline/fields",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["encompass", "pipeline", "fields"],
+                  "query": [
+                    { "key": "canonicalNames", "value": "Fields.4000,Fields.11,Loan.LoanFolder", "description": "Comma-separated canonical names to retrieve", "disabled": true },
+                    { "key": "fieldIds", "value": "", "description": "Comma-separated field IDs to retrieve", "disabled": true }
+                  ]
+                },
+                "description": "Get canonical field definitions for pipeline queries. Calls ICE GET /encompass/v3/loanPipeline/canonicalFields. Ref: https://developer.icemortgagetechnology.com/developer-connect/reference/get-canonical-names"
               }
             }
           ]

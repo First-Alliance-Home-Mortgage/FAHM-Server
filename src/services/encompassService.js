@@ -446,6 +446,294 @@ class EncompassService {
   }
 
   // ───────────────────────────────────────────────────────────────
+  //  Loan Pipeline
+  // ───────────────────────────────────────────────────────────────
+
+  /**
+   * Standard fields to request from the Encompass loan pipeline.
+   * Maps Encompass canonical field IDs to human-readable keys.
+   */
+  static get PIPELINE_FIELDS() {
+    return {
+      'Loan.LoanFolder': 'loanFolder',
+      'Loan.Guid': 'loanGuid',
+      'Fields.1': 'loanNumber',
+      'Fields.4000': 'status',
+      'Fields.4002': 'lastModified',
+      'Fields.65': 'borrowerFirstName',
+      'Fields.66': 'borrowerLastName',
+      'Fields.11': 'loanAmount',
+      'Fields.3': 'propertyAddress',
+      'Fields.1109': 'propertyCity',
+      'Fields.12': 'propertyState',
+      'Fields.14': 'propertyZip',
+      'Fields.317': 'applicationDate',
+      'Fields.748': 'loanOfficerName',
+      'Fields.362': 'loanOfficerId',
+      'Fields.19': 'loanPurpose',
+      'Fields.608': 'loanProgram',
+      'Fields.1393': 'estimatedClosingDate',
+      'Fields.352': 'rateLockExpiration',
+      'Fields.2': 'interestRate',
+    };
+  }
+
+  /**
+   * Valid Encompass milestone names for Fields.4000.
+   * Used for server-side validation before calling the ICE API.
+   */
+  static get VALID_MILESTONES() {
+    return [
+      'Started',
+      'Processing',
+      'Submittal',
+      'Underwriting',
+      'Cond. Approval',
+      'Clear to Close',
+      'Closing',
+      'Funded',
+      'Purchased',
+      'Completion',
+    ];
+  }
+
+  /**
+   * Query the Encompass loan pipeline.
+   *
+   * Uses POST /encompass/v3/loanPipeline — the ICE pipeline search API
+   * with filter expressions, field selection, sorting, and pagination.
+   *
+   * @param {object} options
+   * @param {object} [options.filter] - ICE filter object ({ operator, terms })
+   * @param {string[]} [options.fields] - Field IDs to return
+   * @param {object[]} [options.sortOrder] - Array of { canonicalName, order }
+   * @param {number} [options.start=0] - Pagination offset
+   * @param {number} [options.limit=25] - Page size
+   * @returns {Promise<object[]>} Array of pipeline loan items
+   */
+  async queryPipeline({ filter, fields, sortOrder, start = 0, limit = 25 } = {}) {
+    try {
+      const headers = await this._authHeaders();
+
+      // Always include a filter — ICE loanPipeline requires it.
+      // Fall back to the broad default from buildPipelineFilter().
+      const requestBody = {
+        filter: filter || this.buildPipelineFilter(),
+        fields: fields || Object.keys(EncompassService.PIPELINE_FIELDS),
+        start,
+        limit,
+      };
+
+      if (sortOrder && sortOrder.length > 0) {
+        requestBody.sortOrder = sortOrder;
+      }
+// https://api.elliemae.com/encompass/v3/loanPipeline/canonicalField
+      const url = `${this.baseUrl}/encompass/v3/loanPipeline`;
+      logger.debug('Encompass pipeline request', { url, body: requestBody });
+
+      const response = await axios.post(url, requestBody, { headers });
+
+      return response.data || [];
+    } catch (err) {
+      logger.error('Failed to query Encompass pipeline', {
+        url: `${this.baseUrl}/encompass/v3/loanPipeline`,
+        error: this._parseApiError(err),
+        status: err.response?.status,
+        responseData: err.response?.data,
+        filter,
+        start,
+        limit,
+      });
+      throw this._wrapError(err, 'Failed to query Encompass loan pipeline');
+    }
+  }
+
+  /**
+   * Get canonical field definitions available for pipeline queries.
+   *
+   * Calls GET /encompass/v3/loanPipeline/canonicalFields
+   * Ref: https://developer.icemortgagetechnology.com/developer-connect/reference/get-canonical-names
+   *
+   * @param {object} [options]
+   * @param {string[]} [options.canonicalNames] - Filter by specific canonical names (e.g. ['Fields.4000', 'Fields.11'])
+   * @param {string[]} [options.fieldIds] - Filter by specific field IDs
+   * @returns {Promise<object[]>} Array of canonical field definitions
+   */
+  async getPipelineCanonicalFields({ canonicalNames, fieldIds } = {}) {
+    try {
+      const headers = await this._authHeaders();
+      const url = `${this.baseUrl}/encompass/v3/loanPipeline/canonicalFields`;
+
+      const params = {};
+      if (canonicalNames && canonicalNames.length > 0) {
+        params.canonicalNames = canonicalNames.join(',');
+      }
+      if (fieldIds && fieldIds.length > 0) {
+        params.fieldIds = fieldIds.join(',');
+      }
+
+      logger.debug('Encompass canonical fields request', { url, params });
+
+      const response = await axios.get(url, { headers, params });
+      return response.data || [];
+    } catch (err) {
+      logger.error('Failed to get Encompass canonical fields', {
+        url: `${this.baseUrl}/encompass/v3/loanPipeline/canonicalFields`,
+        error: this._parseApiError(err),
+        status: err.response?.status,
+      });
+      throw this._wrapError(err, 'Failed to get Encompass pipeline canonical fields');
+    }
+  }
+
+  /**
+   * Build an ICE pipeline filter from simple query parameters.
+   *
+   * Translates frontend-friendly params into the ICE filter format:
+   * { operator: "and", terms: [{ canonicalName, value, matchType }] }
+   *
+   * @param {object} params
+   * @param {string} [params.loanFolder] - Folder name (e.g. "My Pipeline")
+   * @param {string} [params.status] - Comma-separated milestone/status names
+   * @param {string} [params.loanOfficer] - LO name to search
+   * @param {string} [params.borrowerName] - Borrower name to search
+   * @param {string} [params.dateFrom] - Application date >= (ISO 8601)
+   * @param {string} [params.dateTo] - Application date <= (ISO 8601)
+   * @returns {object|null} ICE filter object or null if no filters
+   */
+  buildPipelineFilter(params = {}) {
+    const terms = [];
+
+    if (params.loanFolder) {
+      terms.push({
+        canonicalName: 'Loan.LoanFolder',
+        value: params.loanFolder,
+        matchType: 'exact',
+      });
+    }
+
+    if (params.status) {
+      const statuses = params.status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        terms.push({
+          canonicalName: 'Fields.4000',
+          value: statuses[0],
+          matchType: 'exact',
+        });
+      } else if (statuses.length > 1) {
+        // Multiple statuses: OR them together
+        terms.push({
+          operator: 'or',
+          terms: statuses.map(s => ({
+            canonicalName: 'Fields.4000',
+            value: s,
+            matchType: 'exact',
+          })),
+        });
+      }
+    }
+
+    if (params.loanOfficer) {
+      terms.push({
+        canonicalName: 'Fields.748',
+        value: params.loanOfficer,
+        matchType: 'contains',
+      });
+    }
+
+    if (params.borrowerName) {
+      // Search both first and last name fields
+      terms.push({
+        operator: 'or',
+        terms: [
+          { canonicalName: 'Fields.65', value: params.borrowerName, matchType: 'contains' },
+          { canonicalName: 'Fields.66', value: params.borrowerName, matchType: 'contains' },
+        ],
+      });
+    }
+
+    if (params.dateFrom) {
+      terms.push({
+        canonicalName: 'Fields.317',
+        value: params.dateFrom,
+        matchType: 'greaterThanOrEquals',
+      });
+    }
+
+    if (params.dateTo) {
+      terms.push({
+        canonicalName: 'Fields.317',
+        value: params.dateTo,
+        matchType: 'lessThanOrEquals',
+      });
+    }
+
+    // ICE loanPipeline requires a filter object.
+    // When no user-specified terms, match all loans with a non-empty GUID.
+    if (terms.length === 0) {
+      terms.push({
+        canonicalName: 'Loan.LoanFolder',
+        value: '',
+        matchType: 'isNotEmpty',
+      });
+    }
+
+    return {
+      operator: 'and',
+      terms,
+    };
+  }
+
+  /**
+   * Transform raw ICE pipeline response items into a frontend-friendly shape.
+   *
+   * ICE returns items as: { loanGuid, fields: { "Fields.65": "John", ... } }
+   * This maps field IDs to readable property names.
+   *
+   * @param {object[]} pipelineItems - Raw ICE pipeline response
+   * @returns {object[]} Transformed items
+   */
+  transformPipelineItems(pipelineItems) {
+    if (!Array.isArray(pipelineItems)) return [];
+
+    const fieldMap = EncompassService.PIPELINE_FIELDS;
+
+    return pipelineItems.map(item => {
+      const fields = item.fields || {};
+      const mapped = { loanGuid: item.loanGuid };
+
+      for (const [fieldId, propName] of Object.entries(fieldMap)) {
+        if (fields[fieldId] !== undefined) {
+          mapped[propName] = fields[fieldId];
+        }
+      }
+
+      // Compose borrower name from first + last
+      const first = mapped.borrowerFirstName || '';
+      const last = mapped.borrowerLastName || '';
+      mapped.borrowerName = `${first} ${last}`.trim() || null;
+      delete mapped.borrowerFirstName;
+      delete mapped.borrowerLastName;
+
+      // Compose full property address
+      const parts = [mapped.propertyAddress, mapped.propertyCity, mapped.propertyState, mapped.propertyZip].filter(Boolean);
+      mapped.fullPropertyAddress = parts.length > 0 ? parts.join(', ') : null;
+
+      // Parse loan amount to number
+      if (mapped.loanAmount) {
+        mapped.loanAmount = parseFloat(mapped.loanAmount) || 0;
+      }
+
+      // Parse interest rate to number
+      if (mapped.interestRate) {
+        mapped.interestRate = parseFloat(mapped.interestRate) || null;
+      }
+
+      return mapped;
+    });
+  }
+
+  // ───────────────────────────────────────────────────────────────
   //  Data Transformers
   // ───────────────────────────────────────────────────────────────
 
@@ -525,17 +813,24 @@ class EncompassService {
    */
   _parseApiError(err) {
     if (err.response) {
+      const status = err.response.status;
       const data = err.response.data;
       // Encompass errors may come as { summary, details, errorCode } or plain string
       if (typeof data === 'object' && data !== null) {
-        return data.summary || data.message || data.error || JSON.stringify(data);
+        const msg = data.summary || data.message || data.error || data.errorMessage;
+        if (msg) return `HTTP ${status} — ${msg}`;
+        const json = JSON.stringify(data);
+        if (json !== '{}') return `HTTP ${status} — ${json}`;
       }
-      if (typeof data === 'string' && data.length < 500) {
-        return data;
+      if (typeof data === 'string' && data.length > 0 && data.length < 500) {
+        return `HTTP ${status} — ${data}`;
       }
-      return `HTTP ${err.response.status}`;
+      return `HTTP ${status} (empty response body)`;
     }
-    return err.message;
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      return `Network error: ${err.code} — ${err.message || 'cannot reach Encompass API'}`;
+    }
+    return err.message || 'Unknown error';
   }
 
   /**
