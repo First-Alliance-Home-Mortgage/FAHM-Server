@@ -2,19 +2,17 @@ const express = require('express');
 const { body, query } = require('express-validator');
 const { authenticate, authorize } = require('../middleware/auth');
 const encompassController = require('../controllers/encompassController');
-const encompassService = require('../services/encompassService');
 
 const router = express.Router();
 
 // Webhook endpoint must be before authentication middleware
-// as it receives requests from Encompass, not authenticated users
 /**
  * @swagger
  * /encompass/webhook:
  *   post:
- *     summary: Encompass webhook endpoint
- *     tags: [Encompass Integration]
- *     description: Receive real-time updates from Encompass. This endpoint should be registered with Encompass webhook configuration.
+ *     summary: Webhook endpoint for external events
+ *     tags: [Loan Management]
+ *     description: Receive real-time updates from external systems.
  *     requestBody:
  *       required: true
  *       content:
@@ -29,91 +27,27 @@ const router = express.Router();
  *                 type: string
  *               resourceId:
  *                 type: string
- *                 description: The Encompass loan GUID
+ *                 description: The external loan reference ID
  *               data:
  *                 type: object
  *     responses:
  *       200:
  *         description: Webhook processed
- *       401:
- *         description: Invalid webhook signature
  */
 router.post('/webhook', encompassController.webhook);
 
 // All routes below require authentication
 router.use(authenticate);
 
-router.get('/encompassToken', encompassController.encompassToken);
-
-/**
- * @swagger
- * /encompass/token/introspect:
- *   get:
- *     summary: Introspect current Encompass access token
- *     tags: [Encompass Integration]
- *     description: Check whether the cached Encompass access token is still active and retrieve its metadata (expiry, username, instance).
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Token introspection result
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 active:
- *                   type: boolean
- *                 exp:
- *                   type: number
- *                 username:
- *                   type: string
- *                 encompass_instance_id:
- *                   type: string
- *       503:
- *         description: Token introspection failed
- */
-router.get(
-  '/token/introspect',
-  authorize({ roles: ['admin'] }),
-  encompassController.introspectToken
-);
-
-/**
- * @swagger
- * /encompass/token/revoke:
- *   post:
- *     summary: Revoke current Encompass access token
- *     tags: [Encompass Integration]
- *     description: Revoke the cached Encompass access token and clear the local cache. Useful for security rotation.
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Revocation result
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 revoked:
- *                   type: boolean
- *                 message:
- *                   type: string
- */
-router.post(
-  '/token/revoke',
-  authorize({ roles: ['admin'] }),
-  encompassController.revokeToken
-);
+const { VALID_STATUSES } = encompassController;
 
 /**
  * @swagger
  * /encompass/test-connection:
  *   get:
- *     summary: Test Encompass API connection
- *     tags: [Encompass Integration]
- *     description: Verify that the server can connect to Encompass API. Checks configuration, authentication, and API connectivity.
+ *     summary: Test database connection
+ *     tags: [Loan Management]
+ *     description: Verify that the server can connect to the local database.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -129,7 +63,7 @@ router.post(
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: Successfully connected to Encompass API
+ *                   example: Local database connection healthy
  *                 timestamp:
  *                   type: string
  *                   format: date-time
@@ -138,27 +72,8 @@ router.post(
  *                   description: Test duration in milliseconds
  *                 checks:
  *                   type: object
- *                   properties:
- *                     configuration:
- *                       type: object
- *                     authentication:
- *                       type: object
- *                     apiConnectivity:
- *                       type: object
  *       503:
  *         description: Connection failed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 connected:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                 error:
- *                   type: string
  */
 router.get(
   '/test-connection',
@@ -166,26 +81,24 @@ router.get(
   encompassController.testConnection
 );
 
-const validMilestones = encompassService.constructor.VALID_MILESTONES;
-
 const validatePipelineQuery = [
-  query('loanFolder').optional().isString().trim(),
   query('status')
     .optional()
     .isString()
     .trim()
     .custom((value) => {
       const statuses = value.split(',').map(s => s.trim()).filter(Boolean);
-      const invalid = statuses.filter(s => !validMilestones.includes(s));
+      const invalid = statuses.filter(s => !VALID_STATUSES.includes(s));
       if (invalid.length > 0) {
         throw new Error(
-          `Invalid milestone(s): ${invalid.join(', ')}. Valid values: ${validMilestones.join(', ')}`
+          `Invalid status(es): ${invalid.join(', ')}. Valid values: ${VALID_STATUSES.join(', ')}`
         );
       }
       return true;
     }),
   query('loanOfficer').optional().isString().trim(),
   query('borrowerName').optional().isString().trim(),
+  query('source').optional().isIn(['retail', 'tpo']),
   query('dateFrom').optional().isISO8601(),
   query('dateTo').optional().isISO8601(),
   query('start').optional().isInt({ min: 0 }).toInt(),
@@ -198,38 +111,37 @@ const validatePipelineQuery = [
  * @swagger
  * /encompass/pipeline:
  *   get:
- *     summary: Query the Encompass loan pipeline
- *     tags: [Encompass Integration]
+ *     summary: Query the loan pipeline
+ *     tags: [Loan Management]
  *     description: >
- *       Query the Encompass LOS pipeline with filters, sorting, and pagination.
- *       Calls ICE POST /encompass/v3/loanPipeline under the hood and returns
- *       transformed, frontend-friendly results with local link status.
+ *       Query the local loan pipeline with filters, sorting, and pagination.
+ *       Returns loan data from the local database.
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: loanFolder
- *         schema:
- *           type: string
- *         description: Encompass loan folder name (e.g. "My Pipeline")
  *       - in: query
  *         name: status
  *         schema:
  *           type: string
  *         description: >
- *           Comma-separated Encompass milestone names.
- *           Valid values: Started, Processing, Submittal, Underwriting,
- *           Cond. Approval, Clear to Close, Closing, Funded, Purchased, Completion
+ *           Comma-separated loan statuses.
+ *           Valid values: application, processing, underwriting, closing, funded
  *       - in: query
  *         name: loanOfficer
  *         schema:
  *           type: string
- *         description: Filter by loan officer name (contains match)
+ *         description: Filter by loan officer name or ObjectId
  *       - in: query
  *         name: borrowerName
  *         schema:
  *           type: string
- *         description: Filter by borrower first or last name (contains match)
+ *         description: Filter by borrower name (contains match)
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [retail, tpo]
+ *         description: Filter by loan source
  *       - in: query
  *         name: dateFrom
  *         schema:
@@ -259,8 +171,9 @@ const validatePipelineQuery = [
  *         name: sortField
  *         schema:
  *           type: string
- *           default: Fields.4002
- *         description: Encompass field ID to sort by (e.g. "Fields.4002" for last modified)
+ *           enum: [status, amount, createdAt, updatedAt]
+ *           default: updatedAt
+ *         description: Field to sort by
  *       - in: query
  *         name: sortOrder
  *         schema:
@@ -269,7 +182,7 @@ const validatePipelineQuery = [
  *           default: desc
  *     responses:
  *       200:
- *         description: Encompass pipeline results
+ *         description: Pipeline results
  *         content:
  *           application/json:
  *             schema:
@@ -280,7 +193,7 @@ const validatePipelineQuery = [
  *                   items:
  *                     type: object
  *                     properties:
- *                       loanGuid:
+ *                       _id:
  *                         type: string
  *                       loanNumber:
  *                         type: string
@@ -292,15 +205,13 @@ const validatePipelineQuery = [
  *                         type: string
  *                       loanOfficerName:
  *                         type: string
- *                       interestRate:
- *                         type: number
+ *                       propertyAddress:
+ *                         type: string
+ *                       source:
+ *                         type: string
  *                       applicationDate:
  *                         type: string
- *                       estimatedClosingDate:
- *                         type: string
- *                       isLinkedLocally:
- *                         type: boolean
- *                       localLoanId:
+ *                       lastModified:
  *                         type: string
  *                 total:
  *                   type: integer
@@ -324,31 +235,16 @@ router.get(
  * @swagger
  * /encompass/pipeline/fields:
  *   get:
- *     summary: Get canonical field definitions for pipeline queries
- *     tags: [Encompass Integration]
+ *     summary: Get field definitions for pipeline queries
+ *     tags: [Loan Management]
  *     description: >
- *       Returns the list of canonical fields available for filtering, sorting,
- *       and field selection in Encompass pipeline queries.
- *       Calls GET /encompass/v3/loanPipeline/canonicalFields on the ICE API.
- *       Ref: https://developer.icemortgagetechnology.com/developer-connect/reference/get-canonical-names
+ *       Returns the list of fields available for filtering, sorting,
+ *       and field selection in pipeline queries.
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: canonicalNames
- *         schema:
- *           type: string
- *         description: >
- *           Comma-separated canonical names to filter by
- *           (e.g. "Fields.4000,Fields.11,Loan.LoanFolder")
- *       - in: query
- *         name: fieldIds
- *         schema:
- *           type: string
- *         description: Comma-separated field IDs to filter by
  *     responses:
  *       200:
- *         description: Canonical field definitions
+ *         description: Field definitions
  *         content:
  *           application/json:
  *             schema:
@@ -368,16 +264,16 @@ router.get(
 router.get(
   '/pipeline/fields',
   authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'branch_manager', 'admin'] }),
-  encompassController.getPipelineCanonicalFields
+  encompassController.getPipelineFields
 );
 
 /**
  * @swagger
  * /encompass/loans/{id}/sync:
  *   post:
- *     summary: Sync loan data from Encompass
- *     tags: [Encompass Integration]
- *     description: Fetch and sync loan status, milestones, and contacts from Encompass LOS. Auto-syncs every 15 minutes or can be triggered manually.
+ *     summary: Get loan data with contacts
+ *     tags: [Loan Management]
+ *     description: Retrieve loan details along with contacts from local database.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -387,45 +283,9 @@ router.get(
  *         schema:
  *           type: string
  *         description: Loan MongoDB ObjectId
- *         example: 507f191e810c19729de860ea
  *     responses:
  *       200:
- *         description: Loan synced successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Loan synced successfully
- *                 loan:
- *                   $ref: '#/components/schemas/LoanApplication'
- *                 contacts:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       role:
- *                         type: string
- *                         enum: [loan_officer, processor, underwriter, closer, other]
- *                       name:
- *                         type: string
- *                       email:
- *                         type: string
- *                       phone:
- *                         type: string
- *                 syncLog:
- *                   type: object
- *                   properties:
- *                     duration:
- *                       type: number
- *                       description: Sync duration in milliseconds
- *                     timestamp:
- *                       type: string
- *                       format: date-time
- *       400:
- *         description: Loan not linked to Encompass
+ *         description: Loan data retrieved
  *       403:
  *         description: Forbidden
  *       404:
@@ -438,8 +298,8 @@ router.post('/loans/:id/sync', encompassController.syncLoan);
  * /encompass/loans/{id}/contacts:
  *   get:
  *     summary: Get loan contacts
- *     tags: [Encompass Integration]
- *     description: Retrieve all assigned contacts for a loan (Loan Officer, Processor, Underwriter, Closer)
+ *     tags: [Loan Management]
+ *     description: Retrieve all assigned contacts for a loan
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -448,39 +308,11 @@ router.post('/loans/:id/sync', encompassController.syncLoan);
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     responses:
  *       200:
  *         description: List of loan contacts
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   _id:
- *                     type: string
- *                   loan:
- *                     type: string
- *                   role:
- *                     type: string
- *                     enum: [loan_officer, processor, underwriter, closer, other]
- *                   name:
- *                     type: string
- *                     example: John Smith
- *                   email:
- *                     type: string
- *                     example: john.smith@fahm.com
- *                   phone:
- *                     type: string
- *                     example: '5551234567'
- *                   isPrimary:
- *                     type: boolean
- *                   user:
- *                     $ref: '#/components/schemas/User'
  *       403:
- *         description: Forbidden - Borrowers can only view their own loan contacts
+ *         description: Forbidden
  *       404:
  *         description: Loan not found
  */
@@ -490,9 +322,8 @@ router.get('/loans/:id/contacts', encompassController.getContacts);
  * @swagger
  * /encompass/loans/{id}/messages:
  *   get:
- *     summary: Get loan messages (chat history)
- *     tags: [Encompass Integration]
- *     description: Retrieve secure in-app messages between borrowers and FAHM contacts (auto-logged to Encompass)
+ *     summary: Get loan messages
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -501,41 +332,9 @@ router.get('/loans/:id/contacts', encompassController.getContacts);
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     responses:
  *       200:
  *         description: Chat message history
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   _id:
- *                     type: string
- *                   loan:
- *                     type: string
- *                   sender:
- *                     $ref: '#/components/schemas/User'
- *                   recipient:
- *                     $ref: '#/components/schemas/User'
- *                   messageType:
- *                     type: string
- *                     enum: [text, system, document, milestone]
- *                   content:
- *                     type: string
- *                     example: Your documents have been received
- *                   read:
- *                     type: boolean
- *                   readAt:
- *                     type: string
- *                     format: date-time
- *                   encompassSynced:
- *                     type: boolean
- *                   createdAt:
- *                     type: string
- *                     format: date-time
  *       403:
  *         description: Forbidden
  *       404:
@@ -548,8 +347,7 @@ router.get('/loans/:id/messages', encompassController.getMessages);
  * /encompass/loans/{id}/messages:
  *   post:
  *     summary: Send message for a loan
- *     tags: [Encompass Integration]
- *     description: Send secure message to borrower or loan team. Messages are auto-logged to Encompass for compliance.
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -558,7 +356,6 @@ router.get('/loans/:id/messages', encompassController.getMessages);
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     requestBody:
  *       required: true
  *       content:
@@ -570,21 +367,18 @@ router.get('/loans/:id/messages', encompassController.getMessages);
  *             properties:
  *               content:
  *                 type: string
- *                 example: Your pre-approval letter is ready for download
  *               recipientId:
  *                 type: string
  *                 format: objectId
- *                 description: Optional recipient user ID (broadcast if omitted)
  *               messageType:
  *                 type: string
  *                 enum: [text, system, document, milestone]
  *                 default: text
  *               metadata:
  *                 type: object
- *                 description: Additional context data
  *     responses:
  *       201:
- *         description: Message sent successfully
+ *         description: Message sent
  *       400:
  *         description: Validation errors
  *       403:
@@ -603,8 +397,7 @@ router.post(
  * /encompass/loans/{id}/messages/{messageId}/read:
  *   post:
  *     summary: Mark message as read
- *     tags: [Encompass Integration]
- *     description: Mark a loan message as read by the recipient
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -613,18 +406,16 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *       - in: path
  *         name: messageId
  *         required: true
  *         schema:
  *           type: string
- *         description: Message MongoDB ObjectId
  *     responses:
  *       200:
  *         description: Message marked as read
  *       403:
- *         description: Forbidden - Only recipient can mark as read
+ *         description: Forbidden
  *       404:
  *         description: Message not found
  */
@@ -634,9 +425,8 @@ router.post('/loans/:id/messages/:messageId/read', encompassController.markMessa
  * @swagger
  * /encompass/loans/{id}/sync-history:
  *   get:
- *     summary: Get Encompass sync history
- *     tags: [Encompass Integration]
- *     description: View sync log history for debugging and auditing (LO/Admin only)
+ *     summary: Get sync history
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -645,43 +435,11 @@ router.post('/loans/:id/messages/:messageId/read', encompassController.markMessa
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     responses:
  *       200:
  *         description: Sync history retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 lastSync:
- *                   type: string
- *                   format: date-time
- *                 encompassLoanId:
- *                   type: string
- *                 logs:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       syncType:
- *                         type: string
- *                         enum: [status, milestones, contacts, documents, full]
- *                       direction:
- *                         type: string
- *                         enum: [inbound, outbound]
- *                       status:
- *                         type: string
- *                         enum: [pending, success, failed, partial]
- *                       syncDuration:
- *                         type: number
- *                       errorMessage:
- *                         type: string
- *                       createdAt:
- *                         type: string
- *                         format: date-time
  *       403:
- *         description: Forbidden - LO/Admin only
+ *         description: Forbidden
  *       404:
  *         description: Loan not found
  */
@@ -695,9 +453,8 @@ router.get(
  * @swagger
  * /encompass/loans/{id}/link:
  *   post:
- *     summary: Link a loan to Encompass
- *     tags: [Encompass Integration]
- *     description: Associate a FAHM loan with an Encompass loan ID. LO/Admin only.
+ *     summary: Link loan to external reference
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -706,7 +463,6 @@ router.get(
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     requestBody:
  *       required: true
  *       content:
@@ -718,24 +474,21 @@ router.get(
  *             properties:
  *               encompassLoanId:
  *                 type: string
- *                 description: The Encompass loan GUID
- *                 example: "12345678-1234-1234-1234-123456789012"
+ *                 description: External loan reference ID
  *     responses:
  *       200:
- *         description: Loan linked successfully
- *       400:
- *         description: Invalid Encompass loan ID
+ *         description: Loan linked
  *       403:
- *         description: Forbidden - LO/Admin only
+ *         description: Forbidden
  *       404:
  *         description: Loan not found
  *       409:
- *         description: Encompass loan already linked to another application
+ *         description: Already linked to another application
  */
 router.post(
   '/loans/:id/link',
   authorize({ roles: ['loan_officer_tpo', 'loan_officer_retail', 'admin'] }),
-  [body('encompassLoanId').notEmpty().withMessage('Encompass loan ID is required')],
+  [body('encompassLoanId').notEmpty().withMessage('External loan ID is required')],
   encompassController.linkLoan
 );
 
@@ -743,9 +496,8 @@ router.post(
  * @swagger
  * /encompass/loans/{id}/unlink:
  *   post:
- *     summary: Unlink a loan from Encompass
- *     tags: [Encompass Integration]
- *     description: Remove the Encompass association from a FAHM loan. Admin only.
+ *     summary: Unlink loan from external reference
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -754,14 +506,13 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     responses:
  *       200:
- *         description: Loan unlinked successfully
+ *         description: Loan unlinked
  *       400:
- *         description: Loan is not linked to Encompass
+ *         description: Loan not linked
  *       403:
- *         description: Forbidden - Admin only
+ *         description: Admin only
  *       404:
  *         description: Loan not found
  */
@@ -775,9 +526,8 @@ router.post(
  * @swagger
  * /encompass/loans/{id}/status:
  *   patch:
- *     summary: Update loan status in Encompass
- *     tags: [Encompass Integration]
- *     description: Push loan status and milestone updates to Encompass. LO/Admin only.
+ *     summary: Update loan status
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -786,7 +536,6 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     requestBody:
  *       required: true
  *       content:
@@ -809,11 +558,9 @@ router.post(
  *                       enum: [pending, in_progress, completed]
  *     responses:
  *       200:
- *         description: Status updated successfully
- *       400:
- *         description: Loan not linked to Encompass
+ *         description: Status updated
  *       403:
- *         description: Forbidden - LO/Admin only
+ *         description: Forbidden
  *       404:
  *         description: Loan not found
  */
@@ -827,9 +574,8 @@ router.patch(
  * @swagger
  * /encompass/loans/{id}/documents:
  *   get:
- *     summary: Get documents from Encompass
- *     tags: [Encompass Integration]
- *     description: Retrieve list of documents attached to the loan in Encompass
+ *     summary: Get loan documents
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -838,34 +584,9 @@ router.patch(
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     responses:
  *       200:
  *         description: List of documents
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   title:
- *                     type: string
- *                   documentType:
- *                     type: string
- *                   mimeType:
- *                     type: string
- *                   size:
- *                     type: number
- *                   createdAt:
- *                     type: string
- *                     format: date-time
- *                   createdBy:
- *                     type: string
- *       400:
- *         description: Loan not linked to Encompass
  *       403:
  *         description: Forbidden
  *       404:
@@ -877,9 +598,8 @@ router.get('/loans/:id/documents', encompassController.getDocuments);
  * @swagger
  * /encompass/loans/{id}/documents:
  *   post:
- *     summary: Upload document to Encompass
- *     tags: [Encompass Integration]
- *     description: Upload a document to the loan in Encompass
+ *     summary: Upload document for a loan
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -888,7 +608,6 @@ router.get('/loans/:id/documents', encompassController.getDocuments);
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *     requestBody:
  *       required: true
  *       content:
@@ -901,9 +620,6 @@ router.get('/loans/:id/documents', encompassController.getDocuments);
  *               title:
  *                 type: string
  *                 example: "W2 Form 2024"
- *               documentType:
- *                 type: string
- *                 example: "Income"
  *               base64Content:
  *                 type: string
  *                 description: Base64 encoded file content
@@ -912,9 +628,7 @@ router.get('/loans/:id/documents', encompassController.getDocuments);
  *                 default: application/pdf
  *     responses:
  *       201:
- *         description: Document uploaded successfully
- *       400:
- *         description: Loan not linked to Encompass or invalid request
+ *         description: Document uploaded
  *       403:
  *         description: Forbidden
  *       404:
@@ -928,11 +642,10 @@ router.post(
 
 /**
  * @swagger
- * /encompass/loans/{id}/documents/{attachmentId}/download:
+ * /encompass/loans/{id}/documents/{documentId}/download:
  *   get:
- *     summary: Download document from Encompass
- *     tags: [Encompass Integration]
- *     description: Download a specific document from Encompass
+ *     summary: Download a document
+ *     tags: [Loan Management]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -941,13 +654,12 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
- *         description: Loan MongoDB ObjectId
  *       - in: path
- *         name: attachmentId
+ *         name: documentId
  *         required: true
  *         schema:
  *           type: string
- *         description: Encompass attachment ID
+ *         description: Document MongoDB ObjectId
  *     responses:
  *       200:
  *         description: Document file
@@ -956,13 +668,11 @@ router.post(
  *             schema:
  *               type: string
  *               format: binary
- *       400:
- *         description: Loan not linked to Encompass
  *       403:
  *         description: Forbidden
  *       404:
  *         description: Loan or document not found
  */
-router.get('/loans/:id/documents/:attachmentId/download', encompassController.downloadDocument);
+router.get('/loans/:id/documents/:documentId/download', encompassController.downloadDocument);
 
 module.exports = router;

@@ -13,6 +13,19 @@ const buildTokenMetadata = (req = {}) => {
   };
 };
 
+/**
+ * Populate user with role and capabilities for API responses.
+ * Returns a clean user object (no password) with the full role tree.
+ */
+const populateUserForResponse = async (userId) => {
+  return User.findById(userId)
+    .select('-password')
+    .populate({
+      path: 'role',
+      populate: { path: 'capabilities' },
+    });
+};
+
 exports.register = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -26,7 +39,11 @@ exports.register = async (req, res, next) => {
       return next(createError(409, 'Email already registered'));
     }
     const user = await User.create({ name, email, password, role, phone });
-    const token = tokenService.sign(user);
+
+    // Populate role + capabilities for the response
+    const populatedUser = await populateUserForResponse(user._id);
+
+    const token = tokenService.sign(populatedUser);
     const { token: refreshToken } = await refreshTokenService.createToken({
       userId: user._id,
       metadata: buildTokenMetadata(req),
@@ -35,7 +52,7 @@ exports.register = async (req, res, next) => {
     return res.status(201).json({
       token,
       refreshToken,
-      user: { id: user._id, name, email, role, phone },
+      user: populatedUser,
     });
   } catch (err) {
     await audit({ action: 'auth.register', status: 'error', metadata: { message: err.message } }, req);
@@ -55,7 +72,11 @@ exports.login = async (req, res, next) => {
     if (!user) return next(createError(401, 'Invalid credentials'));
     const match = await user.comparePassword(password);
     if (!match) return next(createError(401, 'Invalid credentials'));
-    const token = tokenService.sign(user);
+
+    // Populate role + capabilities for the response
+    const populatedUser = await populateUserForResponse(user._id);
+
+    const token = tokenService.sign(populatedUser);
     const { token: refreshToken } = await refreshTokenService.createToken({
       userId: user._id,
       metadata: buildTokenMetadata(req),
@@ -64,7 +85,7 @@ exports.login = async (req, res, next) => {
     return res.json({
       token,
       refreshToken,
-      user: { id: user._id, name: user.name, email, role: user.role },
+      user: populatedUser,
     });
   } catch (err) {
     await audit({ action: 'auth.login', status: 'error', metadata: { message: err.message } }, req);
@@ -84,13 +105,18 @@ exports.refresh = async (req, res, next) => {
       metadata: buildTokenMetadata(req),
     });
 
-    const user = await User.findById(rotation.userId);
-    if (!user) {
+    // Populate role + capabilities for both the JWT and the response
+    const populatedUser = await populateUserForResponse(rotation.userId);
+    if (!populatedUser) {
       return next(createError(401, 'User not found'));
     }
-    const token = tokenService.sign(user);
+    const token = tokenService.sign(populatedUser);
     await audit({ action: 'auth.refresh', entityType: 'User', entityId: rotation.userId.toString() }, req);
-    return res.json({ token, refreshToken: rotation.refreshToken });
+    return res.json({
+      token,
+      refreshToken: rotation.refreshToken,
+      user: populatedUser,
+    });
   } catch (err) {
     await audit({ action: 'auth.refresh', status: 'error', metadata: { message: err.message } }, req);
     return next(err);

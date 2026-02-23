@@ -10,14 +10,14 @@ const roles = require('../config/roles');
  * @swagger
  * tags:
  *   name: Rate & Pricing
- *   description: Optimal Blue rate sheets, rate locks, and rate alerts
+ *   description: local database rate sheets, rate locks, and rate alerts
  */
 
 /**
  * @swagger
  * /api/v1/rates/current:
  *   get:
- *     summary: Get current rates from Optimal Blue
+ *     summary: Get current rates from local database
  *     tags: [Rate & Pricing]
  *     security:
  *       - bearerAuth: []
@@ -110,7 +110,7 @@ router.get('/history', authenticate, rateController.getRateHistory);
  * @swagger
  * /api/v1/rates/products:
  *   get:
- *     summary: Get product pricing from Optimal Blue
+ *     summary: Get product pricing from local database
  *     tags: [Rate & Pricing]
  *     security:
  *       - bearerAuth: []

@@ -361,35 +361,10 @@
       ]
     },
     {
-      "name": "Encompass Integration",
-      "description": "Encompass LOS integration endpoints.\n\nAuth: OAuth 2.0 (Resource Owner Password Credentials for lenders, Client Credentials for ISV partners).\nRef: https://developer.icemortgagetechnology.com/developer-connect/docs/authentication",
+      "name": "Loan Management",
+      "description": "Loan management endpoints for pipeline, contacts, messages, documents, and status tracking.\n\nAll endpoints use local MongoDB data.",
       "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{authToken}}", "type": "string" }] },
       "item": [
-        {
-          "name": "Token Management",
-          "item": [
-            {
-              "name": "Get Encompass Token",
-              "request": { "method": "GET", "url": "{{baseUrl}}/encompass/encompassToken" }
-            },
-            {
-              "name": "Introspect Encompass Token (Admin)",
-              "request": {
-                "method": "GET",
-                "url": "{{baseUrl}}/encompass/token/introspect",
-                "description": "Check whether the cached Encompass access token is still active. Returns token metadata including expiry, username, and instance ID. Admin only."
-              }
-            },
-            {
-              "name": "Revoke Encompass Token (Admin)",
-              "request": {
-                "method": "POST",
-                "url": "{{baseUrl}}/encompass/token/revoke",
-                "description": "Revoke the cached Encompass access token and clear the local cache. Useful for security rotation. Admin only."
-              }
-            }
-          ]
-        },
         {
           "name": "Connection",
           "item": [
@@ -398,7 +373,7 @@
               "request": {
                 "method": "GET",
                 "url": "{{baseUrl}}/encompass/test-connection",
-                "description": "Verify server can connect to Encompass API. Checks configuration, authentication, and API connectivity."
+                "description": "Verify server can connect to the local database. Checks MongoDB connection and data access."
               }
             }
           ]
@@ -411,23 +386,23 @@
               "request": {
                 "method": "GET",
                 "url": {
-                  "raw": "{{baseUrl}}/encompass/pipeline?start=0&limit=25&sortField=Fields.4002&sortOrder=desc",
+                  "raw": "{{baseUrl}}/encompass/pipeline?start=0&limit=25&sortField=updatedAt&sortOrder=desc",
                   "host": ["{{baseUrl}}"],
                   "path": ["encompass", "pipeline"],
                   "query": [
-                    { "key": "loanFolder", "value": "My Pipeline", "description": "Encompass folder name", "disabled": true },
-                    { "key": "status", "value": "Processing", "description": "Comma-separated milestones: Started, Processing, Submittal, Underwriting, Cond. Approval, Clear to Close, Closing, Funded, Purchased, Completion", "disabled": true },
-                    { "key": "loanOfficer", "value": "", "description": "Loan officer name (contains match)", "disabled": true },
-                    { "key": "borrowerName", "value": "", "description": "Borrower first or last name (contains match)", "disabled": true },
+                    { "key": "status", "value": "processing", "description": "Comma-separated statuses: application, processing, underwriting, closing, funded", "disabled": true },
+                    { "key": "loanOfficer", "value": "", "description": "Loan officer name or ObjectId (contains match)", "disabled": true },
+                    { "key": "borrowerName", "value": "", "description": "Borrower name (contains match)", "disabled": true },
+                    { "key": "source", "value": "retail", "description": "Loan source: retail or tpo", "disabled": true },
                     { "key": "dateFrom", "value": "2024-01-01", "description": "Application date >= (ISO 8601)", "disabled": true },
                     { "key": "dateTo", "value": "2025-12-31", "description": "Application date <= (ISO 8601)", "disabled": true },
                     { "key": "start", "value": "0", "description": "Pagination offset (default: 0)" },
                     { "key": "limit", "value": "25", "description": "Page size, max 100 (default: 25)" },
-                    { "key": "sortField", "value": "Fields.4002", "description": "Encompass field ID to sort by (default: Fields.4002 = last modified)" },
+                    { "key": "sortField", "value": "updatedAt", "description": "Sort by: status, amount, createdAt, updatedAt (default: updatedAt)" },
                     { "key": "sortOrder", "value": "desc", "description": "Sort direction: asc | desc (default: desc)" }
                   ]
                 },
-                "description": "Query the Encompass LOS loan pipeline with filters, sorting, and pagination. Returns transformed results with local link status. Requires LO, Branch Manager, or Admin role."
+                "description": "Query the local loan pipeline with filters, sorting, and pagination. Requires LO, Branch Manager, or Admin role."
               }
             },
             {
@@ -435,15 +410,15 @@
               "request": {
                 "method": "GET",
                 "url": {
-                  "raw": "{{baseUrl}}/encompass/pipeline?status=Processing&limit=10",
+                  "raw": "{{baseUrl}}/encompass/pipeline?status=processing&limit=10",
                   "host": ["{{baseUrl}}"],
                   "path": ["encompass", "pipeline"],
                   "query": [
-                    { "key": "status", "value": "Processing" },
+                    { "key": "status", "value": "processing" },
                     { "key": "limit", "value": "10" }
                   ]
                 },
-                "description": "Query pipeline filtered by milestone status."
+                "description": "Query pipeline filtered by loan status."
               }
             },
             {
@@ -467,12 +442,12 @@
               "request": {
                 "method": "GET",
                 "url": {
-                  "raw": "{{baseUrl}}/encompass/pipeline?loanOfficer=Jane&status=Processing,Underwriting&limit=25",
+                  "raw": "{{baseUrl}}/encompass/pipeline?loanOfficer=Jane&status=processing,underwriting&limit=25",
                   "host": ["{{baseUrl}}"],
                   "path": ["encompass", "pipeline"],
                   "query": [
                     { "key": "loanOfficer", "value": "Jane" },
-                    { "key": "status", "value": "Processing,Underwriting" },
+                    { "key": "status", "value": "processing,underwriting" },
                     { "key": "limit", "value": "25" }
                   ]
                 },
@@ -480,19 +455,15 @@
               }
             },
             {
-              "name": "Get Pipeline Canonical Fields",
+              "name": "Get Pipeline Fields",
               "request": {
                 "method": "GET",
                 "url": {
                   "raw": "{{baseUrl}}/encompass/pipeline/fields",
                   "host": ["{{baseUrl}}"],
-                  "path": ["encompass", "pipeline", "fields"],
-                  "query": [
-                    { "key": "canonicalNames", "value": "Fields.4000,Fields.11,Loan.LoanFolder", "description": "Comma-separated canonical names to retrieve", "disabled": true },
-                    { "key": "fieldIds", "value": "", "description": "Comma-separated field IDs to retrieve", "disabled": true }
-                  ]
+                  "path": ["encompass", "pipeline", "fields"]
                 },
-                "description": "Get canonical field definitions for pipeline queries. Calls ICE GET /encompass/v3/loanPipeline/canonicalFields. Ref: https://developer.icemortgagetechnology.com/developer-connect/reference/get-canonical-names"
+                "description": "Get field definitions available for pipeline queries, including sortable/filterable metadata and valid values."
               }
             }
           ]
@@ -501,15 +472,15 @@
           "name": "Loan Operations",
           "item": [
             {
-              "name": "Sync Loan from Encompass",
+              "name": "Get Loan Data with Contacts",
               "request": {
                 "method": "POST",
                 "url": "{{baseUrl}}/encompass/loans/{{loanId}}/sync",
-                "description": "Fetch and sync loan status, milestones, and contacts from Encompass LOS."
+                "description": "Retrieve loan details along with contacts from local database."
               }
             },
             {
-              "name": "Link Loan to Encompass",
+              "name": "Link Loan to External Reference",
               "request": {
                 "method": "POST",
                 "url": "{{baseUrl}}/encompass/loans/{{loanId}}/link",
@@ -518,19 +489,19 @@
                   "mode": "raw",
                   "raw": "{\n  \"encompassLoanId\": \"12345678-1234-1234-1234-123456789012\"\n}"
                 },
-                "description": "Associate a FAHM loan with an Encompass loan GUID. LO/Admin only."
+                "description": "Associate a loan with an external reference ID. LO/Admin only."
               }
             },
             {
-              "name": "Unlink Loan from Encompass (Admin)",
+              "name": "Unlink Loan (Admin)",
               "request": {
                 "method": "POST",
                 "url": "{{baseUrl}}/encompass/loans/{{loanId}}/unlink",
-                "description": "Remove the Encompass association from a FAHM loan. Admin only."
+                "description": "Remove the external association from a loan. Admin only."
               }
             },
             {
-              "name": "Update Loan Status in Encompass",
+              "name": "Update Loan Status",
               "request": {
                 "method": "PATCH",
                 "url": "{{baseUrl}}/encompass/loans/{{loanId}}/status",
@@ -539,7 +510,7 @@
                   "mode": "raw",
                   "raw": "{\n  \"status\": \"underwriting\",\n  \"milestones\": [\n    { \"name\": \"Application Submitted\", \"status\": \"completed\" },\n    { \"name\": \"Underwriting\", \"status\": \"in_progress\" }\n  ]\n}"
                 },
-                "description": "Push loan status and milestone updates to Encompass. LO/Admin only."
+                "description": "Update loan status and milestones. LO/Admin only."
               }
             },
             {
@@ -586,7 +557,7 @@
                   "mode": "raw",
                   "raw": "{\n  \"content\": \"Hi, I have a question about my loan application.\",\n  \"recipientId\": \"{{userId}}\",\n  \"messageType\": \"text\",\n  \"metadata\": {}\n}"
                 },
-                "description": "Send secure message to borrower or loan team. Messages are auto-logged to Encompass for compliance."
+                "description": "Send message to borrower or loan team."
               }
             },
             {
@@ -603,32 +574,32 @@
           "name": "Documents",
           "item": [
             {
-              "name": "Get Encompass Documents",
+              "name": "Get Loan Documents",
               "request": {
                 "method": "GET",
                 "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents",
-                "description": "Retrieve list of documents attached to the loan in Encompass eFolder."
+                "description": "Retrieve list of documents for a loan from local storage."
               }
             },
             {
-              "name": "Upload Document to Encompass",
+              "name": "Upload Document",
               "request": {
                 "method": "POST",
                 "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"base64Content\": \"JVBERi0xLjQK...\",\n  \"title\": \"W2 Form 2024\",\n  \"documentType\": \"Income\",\n  \"mimeType\": \"application/pdf\"\n}"
+                  "raw": "{\n  \"base64Content\": \"JVBERi0xLjQK...\",\n  \"title\": \"W2 Form 2024\",\n  \"mimeType\": \"application/pdf\"\n}"
                 },
-                "description": "Upload a document to the loan in Encompass eFolder. Uses two-step upload (create metadata, then upload content)."
+                "description": "Upload a document for a loan to local storage."
               }
             },
             {
-              "name": "Download Encompass Document",
+              "name": "Download Document",
               "request": {
                 "method": "GET",
-                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents/{{attachmentId}}/download",
-                "description": "Download a specific document from Encompass eFolder."
+                "url": "{{baseUrl}}/encompass/loans/{{loanId}}/documents/{{documentId}}/download",
+                "description": "Download a specific document from local storage."
               }
             }
           ]
@@ -637,20 +608,19 @@
           "name": "Webhook",
           "item": [
             {
-              "name": "Encompass Webhook",
+              "name": "Webhook",
               "auth": { "type": "noauth" },
               "request": {
                 "method": "POST",
                 "url": "{{baseUrl}}/encompass/webhook",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "x-encompass-signature", "value": "{{webhookSignature}}", "description": "HMAC-SHA256 signature (optional, validated if ENCOMPASS_WEBHOOK_SECRET is configured)" }
+                  { "key": "Content-Type", "value": "application/json" }
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"eventType\": \"loan.milestone.updated\",\n  \"resourceType\": \"loan\",\n  \"resourceId\": \"12345678-1234-1234-1234-123456789012\",\n  \"data\": {\n    \"status\": \"underwriting\"\n  }\n}"
+                  "raw": "{\n  \"eventType\": \"loan.status.changed\",\n  \"resourceType\": \"loan\",\n  \"resourceId\": \"12345678-1234-1234-1234-123456789012\",\n  \"data\": {\n    \"status\": \"underwriting\"\n  }\n}"
                 },
-                "description": "Receive real-time updates from Encompass. Supports: loan.milestone.updated, loan.status.changed, loan.contacts.updated."
+                "description": "Receive real-time updates from external systems. Supports: loan.milestone.updated, loan.status.changed, loan.contacts.updated."
               }
             }
           ]
@@ -816,7 +786,7 @@
           "name": "Get Current Rates",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/rates/current?loanAmount=300000&productType=conventional&loanTerm=30&creditScore=740&ltv=80"
+            "url": "{{baseUrl}}/rates/current?productType=conventional&loanTerm=30"
           }
         },
         { 
@@ -992,7 +962,7 @@
           }
         },
         {
-          "name": "Get Current Rates from Optimal Blue",
+          "name": "Get Current Rates",
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/calculator/rates?loanAmount=300000&productType=conventional&loanTerm=30&creditScore=740&ltv=80",

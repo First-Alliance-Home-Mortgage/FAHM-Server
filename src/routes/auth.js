@@ -93,7 +93,7 @@ router.post(
     body('email').isEmail().withMessage('Valid email required'),
     passwordValidator,
     // Normalize role to lowercase before validating so clients can send either case.
-    body('role').optional().toLowerCase().isIn(Object.values(roles)),
+    body('role').optional().toLowerCase().isIn(roles.ROLE_SLUGS),
   ],
   authController.register
 );

@@ -1,57 +1,25 @@
 const { validationResult } = require('express-validator');
 const createError = require('http-errors');
+const mongoose = require('mongoose');
 const LoanApplication = require('../models/LoanApplication');
 const LoanContact = require('../models/LoanContact');
 const Message = require('../models/Message');
+const Document = require('../models/Document');
 const EncompassSyncLog = require('../models/EncompassSyncLog');
-const encompassService = require('../services/encompassService');
+const User = require('../models/User');
 const logger = require('../utils/logger');
-const { integrations } = require('../config/env');
+const escapeRegex = require('../utils/escapeRegex');
 
 const STAFF_ROLES = ['loan_officer_tpo', 'loan_officer_retail', 'admin'];
 const BORROWER_ROLE = 'borrower';
 
-exports.encompassToken = async (req, res, next) => {
-  try {
-    const accessToken = await encompassService.getAccessToken();
-    return res.json({ accessToken });
-  } catch (err) {
-    logger.error('Failed to fetch Encompass access token', { error: err.message });
-    return next(err);
-  }
-};
-
 /**
- * Introspect current Encompass token
+ * Valid loan statuses matching the LoanApplication model enum.
  */
-exports.introspectToken = async (req, res, next) => {
-  try {
-    const result = await encompassService.introspectToken();
-    if (!result) {
-      return res.status(503).json({ active: false, message: 'Token introspection failed' });
-    }
-    return res.json(result);
-  } catch (err) {
-    logger.error('Token introspection failed', { error: err.message });
-    return next(err);
-  }
-};
+const VALID_STATUSES = ['application', 'processing', 'underwriting', 'closing', 'funded'];
 
 /**
- * Revoke current Encompass token
- */
-exports.revokeToken = async (req, res, next) => {
-  try {
-    const revoked = await encompassService.revokeToken();
-    return res.json({ revoked, message: revoked ? 'Token revoked' : 'Revocation failed' });
-  } catch (err) {
-    logger.error('Token revocation failed', { error: err.message });
-    return next(err);
-  }
-};
-
-/**
- * Test Encompass connection
+ * Test local database connection
  */
 exports.testConnection = async (req, res, _next) => {
   try {
@@ -61,73 +29,38 @@ exports.testConnection = async (req, res, _next) => {
       checks: {},
     };
 
-    // Test 1: Check environment configuration
-    const hasClientId = !!integrations.encompassClientId;
-    const hasClientSecret = !!integrations.encompassClientSecret;
-    const hasInstanceId = !!integrations.encompassInstanceId;
+    // Check MongoDB connection
+    const dbState = mongoose.connection.readyState;
+    const dbStateMap = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
 
-    results.checks.configuration = {
-      status: hasClientId && hasClientSecret && hasInstanceId ? 'pass' : 'fail',
-      details: {
-        clientIdConfigured: hasClientId,
-        clientSecretConfigured: hasClientSecret,
-        instanceIdConfigured: hasInstanceId,
-      },
+    results.checks.database = {
+      status: dbState === 1 ? 'pass' : 'fail',
+      details: { state: dbStateMap[dbState] || 'unknown' },
     };
 
-    if (!hasClientId || !hasClientSecret || !hasInstanceId) {
+    if (dbState !== 1) {
       results.connected = false;
-      results.message = 'Missing Encompass configuration. Check environment variables.';
+      results.message = 'Database not connected';
       results.duration = Date.now() - startTime;
       return res.status(503).json(results);
     }
 
-    // Test 2: Get access token
-    try {
-      const token = await encompassService.getAccessToken();
-      results.checks.authentication = {
-        status: 'pass',
-        details: {
-          tokenObtained: !!token,
-          tokenLength: token ? token.length : 0,
-        },
-      };
-    } catch (err) {
-      results.checks.authentication = {
-        status: 'fail',
-        error: err.message,
-      };
-      results.connected = false;
-      results.message = 'Failed to authenticate with Encompass API';
-      results.duration = Date.now() - startTime;
-      return res.status(503).json(results);
-    }
-
-    // Test 3: Check API connectivity (optional status endpoint)
-    try {
-      const status = await encompassService.getStatus();
-      results.checks.apiConnectivity = {
-        status: 'pass',
-        details: status,
-      };
-    } catch (err) {
-      // Status endpoint might not be available, but auth worked
-      results.checks.apiConnectivity = {
-        status: 'warning',
-        message: 'Status endpoint not available, but authentication succeeded',
-        error: err.message,
-      };
-    }
+    // Quick count to verify read access
+    const loanCount = await LoanApplication.countDocuments();
+    results.checks.dataAccess = {
+      status: 'pass',
+      details: { loanCount },
+    };
 
     results.connected = true;
-    results.message = 'Successfully connected to Encompass API';
+    results.message = 'Local database connection healthy';
     results.duration = Date.now() - startTime;
 
-    logger.info('Encompass connection test successful', { duration: results.duration });
+    logger.info('Connection test successful', { duration: results.duration });
 
     return res.json(results);
   } catch (err) {
-    logger.error('Encompass connection test failed', { error: err.message });
+    logger.error('Connection test failed', { error: err.message });
     return res.status(503).json({
       connected: false,
       message: 'Connection test failed',
@@ -138,7 +71,7 @@ exports.testConnection = async (req, res, _next) => {
 };
 
 /**
- * Sync loan data from Encompass
+ * Get loan details with contacts and milestones (local data)
  */
 exports.syncLoan = async (req, res, next) => {
   try {
@@ -147,7 +80,6 @@ exports.syncLoan = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow loan officers, processors, and admins to sync
     const userSlug = req.user.role?.slug;
     if (
       !STAFF_ROLES.includes(userSlug) &&
@@ -156,66 +88,21 @@ exports.syncLoan = async (req, res, next) => {
       return next(createError(403, 'Forbidden'));
     }
 
-    if (!loan.encompassLoanId) {
-      return next(createError(400, 'Loan not linked to Encompass'));
-    }
+    const contacts = await LoanContact.find({ loan: loan._id })
+      .populate('user', 'name email phone')
+      .sort({ isPrimary: -1, role: 1 });
 
-    const startTime = Date.now();
-    const syncLog = await EncompassSyncLog.create({
-      loan: loan._id,
-      syncType: 'full',
-      direction: 'inbound',
-      encompassLoanId: loan.encompassLoanId,
+    const populatedLoan = await LoanApplication.findById(loan._id)
+      .populate('borrower', 'name email')
+      .populate('assignedOfficer', 'name email role');
+
+    return res.json({
+      message: 'Loan data retrieved successfully',
+      loan: populatedLoan,
+      contacts,
     });
-
-    try {
-      // Fetch data from Encompass
-      const [loanDetails, milestones, contacts] = await Promise.all([
-        encompassService.getLoanDetails(loan.encompassLoanId),
-        encompassService.getLoanMilestones(loan.encompassLoanId),
-        encompassService.getLoanContacts(loan.encompassLoanId),
-      ]);
-
-      // Update loan details
-      loan.milestones = milestones;
-      loan.lastEncompassSync = new Date();
-      loan.encompassData = loanDetails;
-      await loan.save();
-
-      // Update or create contacts
-      await Promise.all(
-        contacts.map(async (contact) => {
-          await LoanContact.findOneAndUpdate(
-            { loan: loan._id, role: contact.role },
-            { ...contact, loan: loan._id },
-            { upsert: true, new: true }
-          );
-        })
-      );
-
-      // Update sync log
-      syncLog.status = 'success';
-      syncLog.syncDuration = Date.now() - startTime;
-      syncLog.dataSnapshot = { milestones, contactsCount: contacts.length };
-      await syncLog.save();
-
-      return res.json({
-        message: 'Loan synced successfully',
-        loan: await LoanApplication.findById(loan._id)
-          .populate('borrower', 'name email')
-          .populate('assignedOfficer', 'name email role'),
-        contacts: await LoanContact.find({ loan: loan._id }),
-        syncLog: { duration: syncLog.syncDuration, timestamp: syncLog.createdAt },
-      });
-    } catch (err) {
-      syncLog.status = 'failed';
-      syncLog.errorMessage = err.message;
-      syncLog.syncDuration = Date.now() - startTime;
-      await syncLog.save();
-      throw err;
-    }
   } catch (err) {
-    logger.error('Loan sync failed', { error: err.message, loanId: req.params.id });
+    logger.error('Failed to retrieve loan data', { error: err.message, loanId: req.params.id });
     return next(err);
   }
 };
@@ -230,7 +117,6 @@ exports.getContacts = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access — borrowers can only view their own loan contacts
     if (
       req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
@@ -258,7 +144,6 @@ exports.getMessages = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access — borrowers can only view their own loan messages
     if (
       req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
@@ -294,7 +179,6 @@ exports.sendMessage = async (req, res, next) => {
     const loan = await LoanApplication.findById(id);
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access — borrowers can only message on their own loans
     if (
       req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
@@ -310,17 +194,6 @@ exports.sendMessage = async (req, res, next) => {
       messageType,
       metadata: req.body.metadata,
     });
-
-    // Sync to Encompass if loan is linked
-    if (loan.encompassLoanId) {
-      const synced = await encompassService.sendMessage(loan.encompassLoanId, {
-        content,
-        createdAt: message.createdAt,
-        senderName: req.user.name,
-      });
-      message.encompassSynced = synced;
-      await message.save();
-    }
 
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'name email role')
@@ -342,7 +215,6 @@ exports.markMessageRead = async (req, res, next) => {
     const message = await Message.findOne({ _id: messageId, loan: id });
     if (!message) return next(createError(404, 'Message not found'));
 
-    // Only recipient can mark as read
     if (message.recipient && message.recipient.toString() !== req.user._id.toString()) {
       return next(createError(403, 'Forbidden'));
     }
@@ -367,7 +239,6 @@ exports.getSyncHistory = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow loan officers and admins
     if (!['loan_officer_tpo', 'loan_officer_retail', 'admin', 'branch_manager'].includes(req.user.role?.slug)) {
       return next(createError(403, 'Forbidden'));
     }
@@ -388,7 +259,7 @@ exports.getSyncHistory = async (req, res, next) => {
 };
 
 /**
- * Link a loan to Encompass
+ * Link a loan to an external reference ID
  */
 exports.linkLoan = async (req, res, next) => {
   try {
@@ -403,31 +274,22 @@ exports.linkLoan = async (req, res, next) => {
     const loan = await LoanApplication.findById(id);
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow loan officers and admins
     if (!STAFF_ROLES.includes(req.user.role?.slug)) {
       return next(createError(403, 'Forbidden'));
     }
 
-    // Verify the Encompass loan exists
-    try {
-      await encompassService.getLoanDetails(encompassLoanId);
-    } catch (_err) {
-      return next(createError(400, 'Invalid Encompass loan ID or loan not accessible'));
-    }
-
-    // Check if another loan is already linked to this Encompass ID
+    // Check if another loan is already linked to this ID
     const existingLink = await LoanApplication.findOne({
       encompassLoanId,
       _id: { $ne: id },
     });
     if (existingLink) {
-      return next(createError(409, 'This Encompass loan is already linked to another application'));
+      return next(createError(409, 'This external loan ID is already linked to another application'));
     }
 
     loan.encompassLoanId = encompassLoanId;
     await loan.save();
 
-    // Log the linking action
     await EncompassSyncLog.create({
       loan: loan._id,
       syncType: 'link',
@@ -436,26 +298,26 @@ exports.linkLoan = async (req, res, next) => {
       status: 'success',
     });
 
-    logger.info('Loan linked to Encompass', {
+    logger.info('Loan linked', {
       loanId: id,
       encompassLoanId,
       userId: req.user._id,
     });
 
     return res.json({
-      message: 'Loan linked to Encompass successfully',
+      message: 'Loan linked successfully',
       loan: await LoanApplication.findById(id)
         .populate('borrower', 'name email')
         .populate('assignedOfficer', 'name email role'),
     });
   } catch (err) {
-    logger.error('Failed to link loan to Encompass', { error: err.message, loanId: req.params.id });
+    logger.error('Failed to link loan', { error: err.message, loanId: req.params.id });
     return next(err);
   }
 };
 
 /**
- * Unlink a loan from Encompass
+ * Unlink a loan from external reference
  */
 exports.unlinkLoan = async (req, res, next) => {
   try {
@@ -464,13 +326,12 @@ exports.unlinkLoan = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow admins to unlink
     if (req.user.role?.slug !== 'admin') {
-      return next(createError(403, 'Only admins can unlink loans from Encompass'));
+      return next(createError(403, 'Only admins can unlink loans'));
     }
 
     if (!loan.encompassLoanId) {
-      return next(createError(400, 'Loan is not linked to Encompass'));
+      return next(createError(400, 'Loan is not linked to an external reference'));
     }
 
     const previousEncompassId = loan.encompassLoanId;
@@ -479,7 +340,6 @@ exports.unlinkLoan = async (req, res, next) => {
     loan.encompassData = null;
     await loan.save();
 
-    // Log the unlinking action
     await EncompassSyncLog.create({
       loan: loan._id,
       syncType: 'unlink',
@@ -488,26 +348,26 @@ exports.unlinkLoan = async (req, res, next) => {
       status: 'success',
     });
 
-    logger.info('Loan unlinked from Encompass', {
+    logger.info('Loan unlinked', {
       loanId: id,
       previousEncompassId,
       userId: req.user._id,
     });
 
     return res.json({
-      message: 'Loan unlinked from Encompass successfully',
+      message: 'Loan unlinked successfully',
       loan: await LoanApplication.findById(id)
         .populate('borrower', 'name email')
         .populate('assignedOfficer', 'name email role'),
     });
   } catch (err) {
-    logger.error('Failed to unlink loan from Encompass', { error: err.message, loanId: req.params.id });
+    logger.error('Failed to unlink loan', { error: err.message, loanId: req.params.id });
     return next(err);
   }
 };
 
 /**
- * Update loan status in Encompass
+ * Update loan status locally
  */
 exports.updateStatus = async (req, res, next) => {
   try {
@@ -522,70 +382,41 @@ exports.updateStatus = async (req, res, next) => {
     const loan = await LoanApplication.findById(id);
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow loan officers and admins
     if (!STAFF_ROLES.includes(req.user.role?.slug)) {
       return next(createError(403, 'Forbidden'));
     }
 
-    if (!loan.encompassLoanId) {
-      return next(createError(400, 'Loan not linked to Encompass'));
+    if (status) {
+      loan.status = status;
     }
+    if (milestones) {
+      loan.milestones = milestones;
+    }
+    await loan.save();
 
-    const startTime = Date.now();
-    const syncLog = await EncompassSyncLog.create({
-      loan: loan._id,
-      syncType: 'status',
-      direction: 'outbound',
-      encompassLoanId: loan.encompassLoanId,
+    return res.json({
+      message: 'Loan status updated',
+      loan: await LoanApplication.findById(id)
+        .populate('borrower', 'name email')
+        .populate('assignedOfficer', 'name email role'),
     });
-
-    try {
-      await encompassService.updateLoanStatus(loan.encompassLoanId, status, milestones);
-
-      // Update local loan status
-      if (status) {
-        loan.status = status;
-      }
-      if (milestones) {
-        loan.milestones = milestones;
-      }
-      await loan.save();
-
-      syncLog.status = 'success';
-      syncLog.syncDuration = Date.now() - startTime;
-      await syncLog.save();
-
-      return res.json({
-        message: 'Loan status updated in Encompass',
-        loan: await LoanApplication.findById(id)
-          .populate('borrower', 'name email')
-          .populate('assignedOfficer', 'name email role'),
-      });
-    } catch (err) {
-      syncLog.status = 'failed';
-      syncLog.errorMessage = err.message;
-      syncLog.syncDuration = Date.now() - startTime;
-      await syncLog.save();
-      throw err;
-    }
   } catch (err) {
-    logger.error('Failed to update loan status in Encompass', { error: err.message, loanId: req.params.id });
+    logger.error('Failed to update loan status', { error: err.message, loanId: req.params.id });
     return next(err);
   }
 };
 
 /**
- * Upload document to Encompass
+ * Upload document (store locally)
  */
 exports.uploadDocument = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, documentType, base64Content, mimeType } = req.body;
+    const { title, base64Content, mimeType } = req.body;
 
     const loan = await LoanApplication.findById(id);
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Only allow loan officers, processors, admins, or the borrower themselves
     if (
       !STAFF_ROLES.includes(req.user.role?.slug) &&
       loan.borrower.toString() !== req.user._id.toString()
@@ -593,52 +424,47 @@ exports.uploadDocument = async (req, res, next) => {
       return next(createError(403, 'Forbidden'));
     }
 
-    if (!loan.encompassLoanId) {
-      return next(createError(400, 'Loan not linked to Encompass'));
-    }
+    // Determine file type from mimeType
+    const mimeToType = {
+      'application/pdf': 'pdf',
+      'image/png': 'png',
+      'image/jpeg': 'jpeg',
+      'image/jpg': 'jpg',
+    };
+    const fileType = mimeToType[mimeType] || 'pdf';
 
-    const startTime = Date.now();
-    const syncLog = await EncompassSyncLog.create({
+    // Calculate file size from base64 content
+    const fileSize = base64Content ? Math.ceil((base64Content.length * 3) / 4) : 0;
+
+    const document = await Document.create({
       loan: loan._id,
-      syncType: 'documents',
-      direction: 'outbound',
-      encompassLoanId: loan.encompassLoanId,
+      uploadedBy: req.user._id,
+      name: title || 'Uploaded Document',
+      type: fileType,
+      size: fileSize,
+      url: `data:${mimeType || 'application/pdf'};base64,${base64Content}`,
+      status: 'uploaded',
     });
 
-    try {
-      const result = await encompassService.uploadDocument(loan.encompassLoanId, {
-        title: title || 'Uploaded Document',
-        documentType: documentType || 'Other',
-        file: {
-          contentType: mimeType || 'application/pdf',
-          content: base64Content,
-        },
-      });
-
-      syncLog.status = 'success';
-      syncLog.syncDuration = Date.now() - startTime;
-      syncLog.dataSnapshot = { documentId: result.attachmentId };
-      await syncLog.save();
-
-      return res.status(201).json({
-        message: 'Document uploaded to Encompass',
-        document: result,
-      });
-    } catch (err) {
-      syncLog.status = 'failed';
-      syncLog.errorMessage = err.message;
-      syncLog.syncDuration = Date.now() - startTime;
-      await syncLog.save();
-      throw err;
-    }
+    return res.status(201).json({
+      message: 'Document uploaded successfully',
+      document: {
+        id: document._id,
+        title: document.name,
+        type: document.type,
+        size: document.size,
+        status: document.status,
+        createdAt: document.createdAt,
+      },
+    });
   } catch (err) {
-    logger.error('Failed to upload document to Encompass', { error: err.message, loanId: req.params.id });
+    logger.error('Failed to upload document', { error: err.message, loanId: req.params.id });
     return next(err);
   }
 };
 
 /**
- * Get documents from Encompass
+ * Get documents for a loan (local data)
  */
 exports.getDocuments = async (req, res, next) => {
   try {
@@ -647,7 +473,6 @@ exports.getDocuments = async (req, res, next) => {
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access — borrowers can only view their own loan documents
     if (
       req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
@@ -655,30 +480,35 @@ exports.getDocuments = async (req, res, next) => {
       return next(createError(403, 'Forbidden'));
     }
 
-    if (!loan.encompassLoanId) {
-      return next(createError(400, 'Loan not linked to Encompass'));
-    }
+    const documents = await Document.find({ loan: id })
+      .populate('uploadedBy', 'name email')
+      .sort({ createdAt: -1 });
 
-    const documents = await encompassService.getDocuments(loan.encompassLoanId);
-
-    return res.json(documents);
+    return res.json(documents.map(doc => ({
+      id: doc._id,
+      title: doc.name,
+      type: doc.type,
+      size: doc.size,
+      status: doc.status,
+      createdAt: doc.createdAt,
+      createdBy: doc.uploadedBy?.name || 'Unknown',
+    })));
   } catch (err) {
-    logger.error('Failed to get documents from Encompass', { error: err.message, loanId: req.params.id });
+    logger.error('Failed to get documents', { error: err.message, loanId: req.params.id });
     return next(err);
   }
 };
 
 /**
- * Download a document from Encompass
+ * Download a document (local data)
  */
 exports.downloadDocument = async (req, res, next) => {
   try {
-    const { id, attachmentId } = req.params;
+    const { id, documentId } = req.params;
     const loan = await LoanApplication.findById(id);
 
     if (!loan) return next(createError(404, 'Loan not found'));
 
-    // Check access — borrowers can only download their own loan documents
     if (
       req.user.role?.slug === BORROWER_ROLE &&
       loan.borrower.toString() !== req.user._id.toString()
@@ -686,33 +516,39 @@ exports.downloadDocument = async (req, res, next) => {
       return next(createError(403, 'Forbidden'));
     }
 
-    if (!loan.encompassLoanId) {
-      return next(createError(400, 'Loan not linked to Encompass'));
+    const document = await Document.findOne({ _id: documentId, loan: id });
+    if (!document) return next(createError(404, 'Document not found'));
+
+    // If URL is a data URI, extract and send the content
+    if (document.url && document.url.startsWith('data:')) {
+      const matches = document.url.match(/^data:(.+);base64,(.+)$/);
+      if (matches) {
+        const contentType = matches[1];
+        const base64Data = matches[2];
+        res.set({
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${document.name}"`,
+        });
+        return res.send(Buffer.from(base64Data, 'base64'));
+      }
     }
 
-    const document = await encompassService.downloadDocument(loan.encompassLoanId, attachmentId);
-
-    res.set({
-      'Content-Type': document.contentType || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${document.filename || 'document'}"`,
-    });
-
-    return res.send(Buffer.from(document.data));
+    // For external URLs, redirect
+    return res.redirect(document.url);
   } catch (err) {
-    logger.error('Failed to download document from Encompass', {
+    logger.error('Failed to download document', {
       error: err.message,
       loanId: req.params.id,
-      attachmentId: req.params.attachmentId,
+      documentId: req.params.documentId,
     });
     return next(err);
   }
 };
 
 /**
- * Query the Encompass loan pipeline.
+ * Query the local loan pipeline.
  *
- * Translates simple query parameters into ICE pipeline filter format
- * and returns transformed, frontend-friendly results.
+ * Queries the LoanApplication collection with filters, sorting, and pagination.
  */
 exports.queryPipeline = async (req, res, next) => {
   try {
@@ -722,126 +558,153 @@ exports.queryPipeline = async (req, res, next) => {
     }
 
     const {
-      loanFolder,
       status,
       loanOfficer,
       borrowerName,
       dateFrom,
       dateTo,
+      source,
       sortField,
       sortOrder,
     } = req.query;
     const start = parseInt(req.query.start, 10) || 0;
     const limit = Math.min(parseInt(req.query.limit, 10) || 25, 100);
 
-    // Build ICE filter from query params
-    const filter = encompassService.buildPipelineFilter({
-      loanFolder,
-      status,
-      loanOfficer,
-      borrowerName,
-      dateFrom,
-      dateTo,
-    });
+    const filter = {};
 
-    // Build sort order
-    const sort = sortField
-      ? [{ canonicalName: sortField, order: sortOrder || 'desc' }]
-      : [{ canonicalName: 'Fields.4002', order: 'desc' }]; // Default: last modified desc
-
-    // Query Encompass pipeline
-    const rawItems = await encompassService.queryPipeline({
-      filter,
-      sortOrder: sort,
-      start,
-      limit,
-    });
-
-    // Transform ICE response into frontend-friendly shape
-    const items = encompassService.transformPipelineItems(rawItems);
-
-    // Batch-check which loans are already linked locally
-    const guids = items.map(item => item.loanGuid).filter(Boolean);
-    const linkedLoans = guids.length > 0
-      ? await LoanApplication.find(
-          { encompassLoanId: { $in: guids } },
-          { encompassLoanId: 1, _id: 1, status: 1 }
-        )
-      : [];
-    const linkedMap = new Map(linkedLoans.map(l => [l.encompassLoanId, { _id: l._id, status: l.status }]));
-
-    // Enrich items with local link status
-    const data = items.map(item => ({
-      ...item,
-      isLinkedLocally: linkedMap.has(item.loanGuid),
-      localLoanId: linkedMap.get(item.loanGuid)?._id || null,
-      localStatus: linkedMap.get(item.loanGuid)?.status || null,
-    }));
-
-    logger.info('Encompass pipeline queried', { count: data.length, start, limit, hasFilter: !!filter });
-
-    return res.json({
-      data,
-      total: data.length,
-      start,
-      limit,
-    });
-  } catch (err) {
-    logger.error('Failed to query Encompass pipeline', { error: err.message });
-    return next(err);
-  }
-};
-
-/**
- * Get canonical field definitions available for pipeline queries.
- * Returns the list of fields that can be used for filtering, sorting, and selection.
- */
-exports.getPipelineCanonicalFields = async (req, res, next) => {
-  try {
-    const { canonicalNames, fieldIds } = req.query;
-
-    const options = {};
-    if (canonicalNames) {
-      options.canonicalNames = canonicalNames.split(',').map(s => s.trim()).filter(Boolean);
-    }
-    if (fieldIds) {
-      options.fieldIds = fieldIds.split(',').map(s => s.trim()).filter(Boolean);
-    }
-
-    const fields = await encompassService.getPipelineCanonicalFields(options);
-    return res.json({ data: fields, total: Array.isArray(fields) ? fields.length : 0 });
-  } catch (err) {
-    logger.error('Failed to get pipeline canonical fields', { error: err.message });
-    return next(err);
-  }
-};
-
-/**
- * Handle Encompass webhook events
- */
-exports.webhook = async (req, res, next) => {
-  try {
-    const signature = req.headers['x-encompass-signature'];
-    const webhookSecret = integrations.encompassWebhookSecret;
-
-    // Verify webhook signature if secret is configured
-    if (webhookSecret && signature) {
-      const isValid = encompassService.verifyWebhookSignature(req.body, signature, webhookSecret);
-      if (!isValid) {
-        logger.warn('Invalid Encompass webhook signature');
-        return res.status(401).json({ error: 'Invalid signature' });
+    // Filter by status (comma-separated)
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        filter.status = statuses[0];
+      } else if (statuses.length > 1) {
+        filter.status = { $in: statuses };
       }
     }
 
+    // Filter by source
+    if (source) {
+      filter.source = source;
+    }
+
+    // Filter by loan officer (by ObjectId or name search)
+    if (loanOfficer) {
+      if (mongoose.Types.ObjectId.isValid(loanOfficer)) {
+        filter.assignedOfficer = loanOfficer;
+      } else {
+        const safeQ = escapeRegex(loanOfficer);
+        const matchingOfficers = await User.find({
+          name: { $regex: safeQ, $options: 'i' },
+        }).select('_id');
+        if (matchingOfficers.length > 0) {
+          filter.assignedOfficer = { $in: matchingOfficers.map(u => u._id) };
+        } else {
+          // No matching officers — return empty result
+          return res.json({ data: [], total: 0, start, limit });
+        }
+      }
+    }
+
+    // Filter by borrower name
+    if (borrowerName) {
+      const safeQ = escapeRegex(borrowerName);
+      const matchingBorrowers = await User.find({
+        name: { $regex: safeQ, $options: 'i' },
+      }).select('_id');
+      if (matchingBorrowers.length > 0) {
+        filter.borrower = { $in: matchingBorrowers.map(u => u._id) };
+      } else {
+        return res.json({ data: [], total: 0, start, limit });
+      }
+    }
+
+    // Date range filter on createdAt
+    if (dateFrom || dateTo) {
+      filter.createdAt = {};
+      if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) filter.createdAt.$lte = new Date(dateTo);
+    }
+
+    // Build sort
+    const sortMap = {
+      status: 'status',
+      amount: 'amount',
+      createdAt: 'createdAt',
+      updatedAt: 'updatedAt',
+    };
+    const sortKey = sortMap[sortField] || 'updatedAt';
+    const sort = { [sortKey]: sortOrder === 'asc' ? 1 : -1 };
+
+    const total = await LoanApplication.countDocuments(filter);
+    const loans = await LoanApplication.find(filter)
+      .populate('borrower', 'name email')
+      .populate('assignedOfficer', 'name email role')
+      .sort(sort)
+      .skip(start)
+      .limit(limit);
+
+    const data = loans.map(loan => ({
+      _id: loan._id,
+      loanNumber: loan._id.toString().slice(-8).toUpperCase(),
+      borrowerName: loan.borrower?.name || null,
+      borrowerEmail: loan.borrower?.email || null,
+      loanAmount: loan.amount,
+      status: loan.status,
+      loanOfficerName: loan.assignedOfficer?.name || null,
+      propertyAddress: loan.propertyAddress || null,
+      source: loan.source,
+      applicationDate: loan.createdAt,
+      lastModified: loan.updatedAt,
+      milestones: loan.milestones,
+      encompassLoanId: loan.encompassLoanId || null,
+    }));
+
+    logger.info('Pipeline queried', { count: data.length, start, limit, total });
+
+    return res.json({
+      data,
+      total,
+      start,
+      limit,
+    });
+  } catch (err) {
+    logger.error('Failed to query pipeline', { error: err.message });
+    return next(err);
+  }
+};
+
+/**
+ * Get field definitions available for pipeline queries.
+ */
+exports.getPipelineFields = async (_req, res, _next) => {
+  const fields = [
+    { name: 'status', label: 'Loan Status', type: 'string', sortable: true, filterable: true, values: VALID_STATUSES },
+    { name: 'amount', label: 'Loan Amount', type: 'number', sortable: true, filterable: false },
+    { name: 'source', label: 'Loan Source', type: 'string', sortable: false, filterable: true, values: ['retail', 'tpo'] },
+    { name: 'borrowerName', label: 'Borrower Name', type: 'string', sortable: false, filterable: true },
+    { name: 'loanOfficer', label: 'Loan Officer', type: 'string', sortable: false, filterable: true },
+    { name: 'propertyAddress', label: 'Property Address', type: 'string', sortable: false, filterable: false },
+    { name: 'createdAt', label: 'Application Date', type: 'date', sortable: true, filterable: true },
+    { name: 'updatedAt', label: 'Last Modified', type: 'date', sortable: true, filterable: true },
+  ];
+
+  return res.json({ data: fields, total: fields.length });
+};
+
+/**
+ * Handle webhook events (process locally)
+ */
+exports.webhook = async (req, res, next) => {
+  try {
     const { eventType, resourceType, resourceId, data } = req.body;
 
-    logger.info('Received Encompass webhook', { eventType, resourceType, resourceId });
+    logger.info('Received webhook', { eventType, resourceType, resourceId });
 
     // Find the linked loan
     const loan = await LoanApplication.findOne({ encompassLoanId: resourceId });
 
     if (!loan) {
-      logger.warn('Received webhook for unlinked loan', { encompassLoanId: resourceId });
+      logger.warn('Received webhook for unlinked loan', { resourceId });
       return res.status(200).json({ message: 'Acknowledged, loan not linked' });
     }
 
@@ -855,36 +718,36 @@ exports.webhook = async (req, res, next) => {
     });
 
     try {
-      // Handle different event types
       switch (eventType) {
         case 'loan.milestone.updated':
-          const milestones = await encompassService.getLoanMilestones(resourceId);
-          loan.milestones = milestones;
-          loan.lastEncompassSync = new Date();
-          await loan.save();
+          if (data?.milestones) {
+            loan.milestones = data.milestones;
+            await loan.save();
+          }
           break;
 
         case 'loan.status.changed':
-          const loanDetails = await encompassService.getLoanDetails(resourceId);
-          loan.encompassData = loanDetails;
-          loan.lastEncompassSync = new Date();
           if (data?.status) {
             loan.status = data.status;
+          }
+          if (data?.encompassData) {
+            loan.encompassData = data.encompassData;
           }
           await loan.save();
           break;
 
         case 'loan.contacts.updated':
-          const contacts = await encompassService.getLoanContacts(resourceId);
-          await Promise.all(
-            contacts.map(async (contact) => {
-              await LoanContact.findOneAndUpdate(
-                { loan: loan._id, role: contact.role },
-                { ...contact, loan: loan._id },
-                { upsert: true, new: true }
-              );
-            })
-          );
+          if (Array.isArray(data?.contacts)) {
+            await Promise.all(
+              data.contacts.map(async (contact) => {
+                await LoanContact.findOneAndUpdate(
+                  { loan: loan._id, role: contact.role },
+                  { ...contact, loan: loan._id },
+                  { upsert: true, new: true }
+                );
+              })
+            );
+          }
           break;
 
         default:
@@ -902,7 +765,10 @@ exports.webhook = async (req, res, next) => {
       throw err;
     }
   } catch (err) {
-    logger.error('Failed to process Encompass webhook', { error: err.message });
+    logger.error('Failed to process webhook', { error: err.message });
     return next(err);
   }
 };
+
+// Export for use in routes validation
+exports.VALID_STATUSES = VALID_STATUSES;

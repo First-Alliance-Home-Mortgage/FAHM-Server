@@ -6,64 +6,49 @@ const ProductPricing = require('../models/ProductPricing');
 const RateLock = require('../models/RateLock');
 const LoanApplication = require('../models/LoanApplication');
 const Notification = require('../models/Notification');
-const optimalBlueService = require('../services/optimalBlueService');
-const totalExpertService = require('../services/totalExpertService');
 const logger = require('../utils/logger');
 
 /**
- * Get current rates from Optimal Blue
+ * Get current rates from local database
  * GET /api/v1/rates/current
  */
 exports.getCurrentRates = async (req, res, next) => {
   try {
     const {
-      loanAmount,
       productType,
       loanTerm,
       loanPurpose,
-      propertyType,
-      occupancy,
-      ltv,
-      creditScore,
-      refresh,
-      ttlMs,
     } = req.query;
 
-    const scenario = {
-      loanAmount: loanAmount ? parseFloat(loanAmount) : undefined,
-      productType,
-      loanTerm: loanTerm ? parseInt(loanTerm) : undefined,
-      loanPurpose,
-      propertyType,
-      occupancy,
-      ltv: ltv ? parseFloat(ltv) : undefined,
-      creditScore: creditScore ? parseInt(creditScore) : undefined,
-    };
+    const query = { isActive: true };
 
-    const useCache = refresh !== 'true';
-    const ttl = ttlMs ? parseInt(ttlMs, 10) : undefined;
-
-    // Fetch rates from Optimal Blue with optional caching for responsiveness
-    const ratesFromOB = useCache
-      ? await optimalBlueService.getRateSheetCached(scenario, ttl)
-      : await optimalBlueService.getRateSheet(scenario);
-
-    // Save snapshots to database for compliance history
-    const savedSnapshots = [];
-    for (const rateData of ratesFromOB) {
-      const snapshot = new RateSnapshot(rateData);
-      await snapshot.save();
-      savedSnapshots.push(snapshot);
+    if (productType) {
+      query.productType = productType;
     }
 
-    logger.info('Fetched current rates from Optimal Blue', {
+    if (loanTerm) {
+      query.loanTerm = parseInt(loanTerm);
+    }
+
+    if (loanPurpose) {
+      query.loanPurpose = loanPurpose;
+    }
+
+    // Get the most recent active rates (within last 24 hours)
+    query.effectiveDate = { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) };
+
+    const rates = await RateSnapshot.find(query)
+      .sort({ effectiveDate: -1 })
+      .limit(50);
+
+    logger.info('Fetched current rates from local data', {
       userId: req.user._id,
-      count: savedSnapshots.length
+      count: rates.length
     });
 
     res.json({
       success: true,
-      data: savedSnapshots
+      data: rates
     });
   } catch (error) {
     logger.error('Error fetching current rates:', error);
@@ -159,7 +144,7 @@ exports.createRateAlert = async (req, res, next) => {
       if (!loanApp) {
         return next(createError(404, 'Loan not found'));
       }
-      if (loanApp.borrower.toString() !== req.user._id.toString() && 
+      if (loanApp.borrower.toString() !== req.user._id.toString() &&
           loanApp.assignedOfficer?.toString() !== req.user._id.toString()) {
         return next(createError(403, 'Access denied to this loan'));
       }
@@ -348,21 +333,6 @@ exports.checkRateAlerts = async (req, res, next) => {
         // Send notification based on preference
         await sendRateAlertNotification(alert, currentRate);
 
-        // Log to CRM
-        await totalExpertService.logActivity(alert.user._id, {
-          type: 'rate_alert_triggered',
-          subject: `Rate Alert Triggered: ${alert.productType} ${alert.loanTerm}yr`,
-          description: `Rate dropped to ${currentRate}% (target: ${alert.targetRate}%)`,
-          metadata: {
-            alertId: alert._id,
-            productType: alert.productType,
-            loanTerm: alert.loanTerm,
-            targetRate: alert.targetRate,
-            currentRate,
-            triggerType: alert.triggerType
-          }
-        });
-
         triggeredAlerts.push(alert);
       }
 
@@ -390,7 +360,7 @@ exports.checkRateAlerts = async (req, res, next) => {
 };
 
 /**
- * Submit rate lock request
+ * Submit rate lock request (local)
  * POST /api/v1/rates/locks
  */
 exports.submitRateLock = async (req, res, next) => {
@@ -409,7 +379,7 @@ exports.submitRateLock = async (req, res, next) => {
     }
 
     // Only borrower or assigned LO can lock rate
-    if (loan.borrower.toString() !== req.user._id.toString() && 
+    if (loan.borrower.toString() !== req.user._id.toString() &&
         loan.assignedOfficer?.toString() !== req.user._id.toString()) {
       return next(createError(403, 'Access denied to this loan'));
     }
@@ -420,64 +390,35 @@ exports.submitRateLock = async (req, res, next) => {
       return next(createError(404, 'Rate snapshot not found or expired'));
     }
 
-    // Submit to Optimal Blue
-    const lockResult = await optimalBlueService.submitRateLock({
-      loanId: loan._id,
-      rate: snapshot.rate,
-      lockPeriod,
-      loanAmount: loan.loanAmount,
-      productType: snapshot.productType,
-      loanTerm: snapshot.loanTerm,
-      borrower: {
-        name: req.user.name,
-        creditScore: loan.creditScore || 700
-      },
-      property: {
-        address: loan.propertyAddress,
-        type: loan.propertyType,
-        occupancy: loan.occupancy,
-        value: loan.propertyValue
-      }
-    });
+    // Calculate lock expiration
+    const lockExpiresAt = new Date(Date.now() + lockPeriod * 24 * 60 * 60 * 1000);
 
-    // Create rate lock record
+    // Create rate lock record locally
     const rateLock = new RateLock({
       loan: loanId,
       borrower: loan.borrower,
       lockedBy: req.user._id,
-      optimalBlueLockId: lockResult.optimalBlueLockId,
       rateSnapshot: rateSnapshotId,
       lockedRate: snapshot.rate,
       lockedAPR: snapshot.apr,
       points: snapshot.points,
       lockPeriod,
-      lockExpiresAt: lockResult.lockExpiresAt,
-      status: lockResult.status,
-      confirmedAt: lockResult.confirmedAt,
-      loanAmount: loan.loanAmount,
+      lockExpiresAt,
+      status: 'confirmed',
+      confirmedAt: new Date(),
+      loanAmount: loan.amount,
       productType: snapshot.productType,
       loanTerm: snapshot.loanTerm,
       loanPurpose: snapshot.loanPurpose,
-      propertyType: loan.propertyType,
-      occupancy: loan.occupancy,
-      ltv: loan.ltv,
-      creditScore: loan.creditScore,
       pricing: {
         baseRate: snapshot.rate,
-        adjustments: snapshot.adjustments.total,
-        totalAdjustment: snapshot.adjustments.total
+        adjustments: snapshot.adjustments?.total || 0,
+        totalAdjustment: snapshot.adjustments?.total || 0
       },
-      investorName: lockResult.investorName,
-      investorLockConfirmation: lockResult.investorLockConfirmation,
       notes
     });
 
     await rateLock.save();
-
-    // Update loan with rate lock info
-    loan.interestRate = snapshot.rate;
-    loan.rateLockExpiresAt = lockResult.lockExpiresAt;
-    await loan.save();
 
     // Notify borrower
     await Notification.create({
@@ -519,7 +460,7 @@ exports.getLoanRateLocks = async (req, res, next) => {
       return next(createError(404, 'Loan not found'));
     }
 
-    if (loan.borrower.toString() !== req.user._id.toString() && 
+    if (loan.borrower.toString() !== req.user._id.toString() &&
         loan.assignedOfficer?.toString() !== req.user._id.toString()) {
       return next(createError(403, 'Access denied to this loan'));
     }
@@ -540,7 +481,7 @@ exports.getLoanRateLocks = async (req, res, next) => {
 };
 
 /**
- * Extend rate lock
+ * Extend rate lock (local)
  * POST /api/v1/rates/locks/:lockId/extend
  */
 exports.extendRateLock = async (req, res, next) => {
@@ -562,24 +503,19 @@ exports.extendRateLock = async (req, res, next) => {
       return next(createError(400, 'Cannot extend expired or released rate lock'));
     }
 
-    // Submit extension to Optimal Blue
-    const extensionResult = await optimalBlueService.extendRateLock(
-      rateLock.optimalBlueLockId,
-      extensionDays,
-      reason
-    );
-
-    // Update rate lock record
+    // Calculate new expiration locally
     const originalExpiration = rateLock.lockExpiresAt;
-    rateLock.lockExpiresAt = extensionResult.newExpiration;
+    const newExpiration = new Date(originalExpiration.getTime() + extensionDays * 24 * 60 * 60 * 1000);
+
+    rateLock.lockExpiresAt = newExpiration;
     rateLock.status = 'extended';
     rateLock.extensionHistory.push({
       extendedBy: req.user._id,
       extendedAt: new Date(),
       originalExpiration,
-      newExpiration: extensionResult.newExpiration,
+      newExpiration,
       extensionDays,
-      extensionFee: extensionResult.extensionFee,
+      extensionFee: 0,
       reason
     });
 
@@ -602,28 +538,29 @@ exports.extendRateLock = async (req, res, next) => {
 };
 
 /**
- * Get product pricing from Optimal Blue
+ * Get product pricing from local database
  * GET /api/v1/rates/products
  */
 exports.getProductPricing = async (req, res, next) => {
   try {
     const { productType, loanTerm, investorName } = req.query;
 
-    // Fetch from Optimal Blue
-    const products = await optimalBlueService.getProductPricing({
-      productType,
-      loanTerm: loanTerm ? parseInt(loanTerm) : undefined,
-      investorName
-    });
+    const query = { isActive: true };
 
-    // Save to database
-    for (const productData of products) {
-      await ProductPricing.findOneAndUpdate(
-        { optimalBlueProductId: productData.optimalBlueProductId },
-        productData,
-        { upsert: true, new: true }
-      );
+    if (productType) {
+      query.productType = productType;
     }
+
+    if (loanTerm) {
+      query.loanTerm = parseInt(loanTerm);
+    }
+
+    if (investorName) {
+      query.investorName = { $regex: investorName, $options: 'i' };
+    }
+
+    const products = await ProductPricing.find(query)
+      .sort({ productType: 1, loanTerm: 1 });
 
     logger.info('Retrieved product pricing', {
       userId: req.user._id,
@@ -645,8 +582,8 @@ exports.getProductPricing = async (req, res, next) => {
  */
 async function sendRateAlertNotification(alert, currentRate) {
   const user = alert.user;
-  const methods = alert.notificationMethod === 'all' 
-    ? ['push', 'sms', 'email'] 
+  const methods = alert.notificationMethod === 'all'
+    ? ['push', 'sms', 'email']
     : [alert.notificationMethod];
 
   const message = `Rate Alert: ${alert.productType.toUpperCase()} ${alert.loanTerm}-year rate is now ${currentRate}% (your target: ${alert.targetRate}%)`;
@@ -661,9 +598,7 @@ async function sendRateAlertNotification(alert, currentRate) {
         relatedLoan: alert.loan
       });
     }
-    
-    // SMS and email would integrate with external services (e.g., Twilio, SendGrid)
-    // Placeholder implementation
+
     logger.info(`Rate alert ${method} notification sent`, {
       userId: user._id,
       alertId: alert._id,
