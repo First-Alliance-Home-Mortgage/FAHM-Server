@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "FAHM API",
-    "description": "FAHM Server REST API - Node.js/Express backend for loan application management (MongoDB-only; MSSQL removed)",
+    "description": "FAHM Server REST API v1 - Node.js/Express backend for loan application management.\n\nMongoDB-only. 180+ endpoints across 31 route groups.\nAuth: JWT Bearer + Refresh Token rotation.\nRBAC: Database-driven roles & capabilities.\n\nUpdated: 2026-02-23",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -175,8 +175,8 @@
                 { "key": "source", "value": "retail", "description": "Loan source: retail | tpo", "disabled": true },
                 { "key": "assignedOfficer", "value": "{{officerId}}", "description": "Officer MongoDB ObjectId", "disabled": true },
                 { "key": "q", "value": "", "description": "Search borrower name/email or property address", "disabled": true },
-                { "key": "dateFrom", "value": "2024-01-01", "description": "Created date >= (ISO 8601)", "disabled": true },
-                { "key": "dateTo", "value": "2025-12-31", "description": "Created date <= (ISO 8601)", "disabled": true },
+                { "key": "dateFrom", "value": "2026-01-01", "description": "Created date >= (ISO 8601)", "disabled": true },
+                { "key": "dateTo", "value": "2026-12-31", "description": "Created date <= (ISO 8601)", "disabled": true },
                 { "key": "page", "value": "1", "description": "Page number (default: 1)" },
                 { "key": "limit", "value": "20", "description": "Page size, max 100 (default: 20)" },
                 { "key": "sort", "value": "-createdAt", "description": "Sort field, prefix - for desc (default: -createdAt)" }
@@ -232,7 +232,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"loan\": \"{{loanId}}\",\n  \"name\": \"W2_2024.pdf\",\n  \"type\": \"pdf\",\n  \"size\": 245760,\n  \"hash\": \"sha256:abc123def456\",\n  \"url\": \"https://storage.example.com/docs/w2_2024.pdf\"\n}"
+              "raw": "{\n  \"loan\": \"{{loanId}}\",\n  \"name\": \"W2_2025.pdf\",\n  \"type\": \"pdf\",\n  \"size\": 245760,\n  \"hash\": \"sha256:abc123def456\",\n  \"url\": \"https://storage.example.com/docs/w2_2025.pdf\"\n}"
             }
           }
         },
@@ -328,7 +328,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"secret123\",\n  \"role\": \"borrower\",\n  \"phone\": \"5551234567\"\n}"
+              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"borrower\",\n  \"phone\": \"5551234567\"\n}"
             }
           }
         },
@@ -394,8 +394,8 @@
                     { "key": "loanOfficer", "value": "", "description": "Loan officer name or ObjectId (contains match)", "disabled": true },
                     { "key": "borrowerName", "value": "", "description": "Borrower name (contains match)", "disabled": true },
                     { "key": "source", "value": "retail", "description": "Loan source: retail or tpo", "disabled": true },
-                    { "key": "dateFrom", "value": "2024-01-01", "description": "Application date >= (ISO 8601)", "disabled": true },
-                    { "key": "dateTo", "value": "2025-12-31", "description": "Application date <= (ISO 8601)", "disabled": true },
+                    { "key": "dateFrom", "value": "2026-01-01", "description": "Application date >= (ISO 8601)", "disabled": true },
+                    { "key": "dateTo", "value": "2026-12-31", "description": "Application date <= (ISO 8601)", "disabled": true },
                     { "key": "start", "value": "0", "description": "Pagination offset (default: 0)" },
                     { "key": "limit", "value": "25", "description": "Page size, max 100 (default: 25)" },
                     { "key": "sortField", "value": "updatedAt", "description": "Sort by: status, amount, createdAt, updatedAt (default: updatedAt)" },
@@ -589,7 +589,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"base64Content\": \"JVBERi0xLjQK...\",\n  \"title\": \"W2 Form 2024\",\n  \"mimeType\": \"application/pdf\"\n}"
+                  "raw": "{\n  \"base64Content\": \"JVBERi0xLjQK...\",\n  \"title\": \"W2 Form 2025\",\n  \"mimeType\": \"application/pdf\"\n}"
                 },
                 "description": "Upload a document for a loan to local storage."
               }
@@ -674,7 +674,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"metadata\": {\n    \"source\": \"mobile_app\",\n    \"campaign\": \"spring_2024\"\n  }\n}"
+              "raw": "{\n  \"metadata\": {\n    \"source\": \"mobile_app\",\n    \"campaign\": \"spring_2026\"\n  }\n}"
             }
           }
         },
@@ -730,7 +730,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"borrowerId\": \"{{borrowerId}}\",\n  \"ssn\": \"{{ssn}}\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Portland\",\n    \"state\": \"OR\",\n    \"zip\": \"97201\"\n  },\n  \"pullType\": \"hard\",\n  \"purpose\": \"preapproval\",\n  \"borrowerConsent\": {\n    \"obtained\": true,\n    \"consentDate\": \"2025-12-12T10:00:00Z\"\n  }\n}"
+              "raw": "{\n  \"borrowerId\": \"{{borrowerId}}\",\n  \"ssn\": \"{{ssn}}\",\n  \"dateOfBirth\": \"1985-06-15\",\n  \"address\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Portland\",\n    \"state\": \"OR\",\n    \"zip\": \"97201\"\n  },\n  \"pullType\": \"hard\",\n  \"purpose\": \"preapproval\",\n  \"borrowerConsent\": {\n    \"obtained\": true,\n    \"consentDate\": \"2026-02-23T10:00:00Z\"\n  }\n}"
             }
           }
         },
@@ -1032,7 +1032,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"documentType\": \"paystub\",\n  \"mimeType\": \"application/pdf\",\n  \"fileName\": \"paystub_jan_2026.pdf\",\n  \"fileSize\": 245760\n}"
+              "raw": "{\n  \"loanId\": \"{{loanId}}\",\n  \"documentType\": \"paystub\",\n  \"mimeType\": \"application/pdf\",\n  \"fileName\": \"paystub_feb_2026.pdf\",\n  \"fileSize\": 245760\n}"
             }
           }
         },
@@ -1597,17 +1597,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/referral-sources/:id/analytics?startDate=2025-01-01&endDate=2025-12-31&periodType=monthly",
+              "raw": "{{baseUrl}}/referral-sources/:id/analytics?startDate=2026-01-01&endDate=2026-12-31&periodType=monthly",
               "host": ["{{baseUrl}}"],
               "path": ["referral-sources", ":id", "analytics"],
               "query": [
                 {
                   "key": "startDate",
-                  "value": "2025-01-01"
+                  "value": "2026-01-01"
                 },
                 {
                   "key": "endDate",
-                  "value": "2025-12-31"
+                  "value": "2026-12-31"
                 },
                 {
                   "key": "periodType",
@@ -1825,7 +1825,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventType\": \"page_view\",\n  \"details\": {\n    \"page\": \"application_start\",\n    \"timestamp\": \"2025-12-12T10:00:00Z\"\n  }\n}",
+              "raw": "{\n  \"eventType\": \"page_view\",\n  \"details\": {\n    \"page\": \"application_start\",\n    \"timestamp\": \"2026-02-23T10:00:00Z\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1852,7 +1852,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"oauthToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"completionData\": {\n    \"applicationId\": \"APP123456\",\n    \"loanNumber\": \"LN00123456\",\n    \"encompassLoanId\": \"ENC789012\",\n    \"status\": \"submitted\",\n    \"completedSteps\": [\"personal_info\", \"employment\", \"assets\", \"property\"],\n    \"documentsSubmitted\": [\n      {\n        \"documentType\": \"paystub\",\n        \"fileName\": \"paystub_2025_12.pdf\",\n        \"uploadedAt\": \"2025-12-12T11:30:00Z\"\n      }\n    ]\n  }\n}",
+              "raw": "{\n  \"oauthToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"completionData\": {\n    \"applicationId\": \"APP123456\",\n    \"loanNumber\": \"LN00123456\",\n    \"encompassLoanId\": \"ENC789012\",\n    \"status\": \"submitted\",\n    \"completedSteps\": [\"personal_info\", \"employment\", \"assets\", \"property\"],\n    \"documentsSubmitted\": [\n      {\n        \"documentType\": \"paystub\",\n        \"fileName\": \"paystub_2025_12.pdf\",\n        \"uploadedAt\": \"2026-02-23T11:30:00Z\"\n      }\n    ]\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2188,17 +2188,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/sms/stats?startDate=2024-01-01&endDate=2024-12-31&loanId={{loanId}}",
+              "raw": "{{baseUrl}}/sms/stats?startDate=2026-01-01&endDate=2026-12-31&loanId={{loanId}}",
               "host": ["{{baseUrl}}"],
               "path": ["sms", "stats"],
               "query": [
                 {
                   "key": "startDate",
-                  "value": "2024-01-01"
+                  "value": "2026-01-01"
                 },
                 {
                   "key": "endDate",
-                  "value": "2024-12-31"
+                  "value": "2026-12-31"
                 },
                 {
                   "key": "loanId",
@@ -2779,17 +2779,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/chatbot/stats?startDate=2025-01-01&endDate=2025-12-31",
+              "raw": "{{baseUrl}}/chatbot/stats?startDate=2026-01-01&endDate=2026-12-31",
               "host": ["{{baseUrl}}"],
               "path": ["chatbot", "stats"],
               "query": [
                 {
                   "key": "startDate",
-                  "value": "2025-01-01"
+                  "value": "2026-01-01"
                 },
                 {
                   "key": "endDate",
-                  "value": "2025-12-31"
+                  "value": "2026-12-31"
                 }
               ]
             }
@@ -3002,7 +3002,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Custom Role\",\n  \"slug\": \"custom_role\",\n  \"description\": \"A custom role with specific capabilities\",\n  \"capabilities\": [\"{{capabilityId}}\"]\n}"
+              "raw": "{\n  \"name\": \"Custom Role\",\n  \"slug\": \"custom_role\",\n  \"capabilities\": [\"{{capabilityId}}\"]\n}"
             }
           }
         },
@@ -3014,7 +3014,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Role\",\n  \"description\": \"Updated description\",\n  \"capabilities\": [\"{{capabilityId}}\"]\n}"
+              "raw": "{\n  \"name\": \"Updated Role\",\n  \"slug\": \"updated_role\",\n  \"capabilities\": [\"{{capabilityId}}\"]\n}"
             }
           }
         },
@@ -3044,7 +3044,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"dashboard:view\",\n  \"description\": \"Ability to view dashboard reports\",\n  \"category\": \"dashboard\"\n}"
+              "raw": "{\n  \"name\": \"dashboard:view\",\n  \"slug\": \"dashboard-view\",\n  \"description\": \"Ability to view dashboard reports\",\n  \"category\": \"dashboard\"\n}"
             }
           }
         },
@@ -3056,7 +3056,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"dashboard:manage\",\n  \"description\": \"Ability to manage dashboard reports\",\n  \"category\": \"dashboard\"\n}"
+              "raw": "{\n  \"name\": \"dashboard:manage\",\n  \"slug\": \"dashboard-manage\",\n  \"description\": \"Ability to manage dashboard reports\",\n  \"category\": \"dashboard\"\n}"
             }
           }
         },
@@ -3445,7 +3445,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"posSystem\": \"big_pos\",\n  \"submissionData\": {\n    \"notes\": \"Requesting priority review for first-time homebuyer\",\n    \"urgency\": \"high\",\n    \"requestedClosingDate\": \"2025-03-15\"\n  }\n}",
+              "raw": "{\n  \"posSystem\": \"big_pos\",\n  \"submissionData\": {\n    \"notes\": \"Requesting priority review for first-time homebuyer\",\n    \"urgency\": \"high\",\n    \"requestedClosingDate\": \"2026-03-15\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3478,7 +3478,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventType\": \"application.submitted\",\n  \"applicationId\": \"app_12345\",\n  \"timestamp\": \"2025-01-15T12:00:00Z\",\n  \"data\": {\n    \"status\": \"submitted\",\n    \"borrower\": {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  }\n}",
+              "raw": "{\n  \"eventType\": \"application.submitted\",\n  \"applicationId\": \"app_12345\",\n  \"timestamp\": \"2026-02-23T12:00:00Z\",\n  \"data\": {\n    \"status\": \"submitted\",\n    \"borrower\": {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3505,7 +3505,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventType\": \"application.submitted\",\n  \"applicationId\": \"app_12345\",\n  \"timestamp\": \"2025-01-15T12:00:00Z\",\n  \"data\": {\n    \"status\": \"submitted\",\n    \"confirmationNumber\": \"CNF-2025-001\",\n    \"applicant\": {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  }\n}",
+              "raw": "{\n  \"eventType\": \"application.submitted\",\n  \"applicationId\": \"app_12345\",\n  \"timestamp\": \"2026-02-23T12:00:00Z\",\n  \"data\": {\n    \"status\": \"submitted\",\n    \"confirmationNumber\": \"CNF-2026-001\",\n    \"applicant\": {\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"email\": \"jane.doe@example.com\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

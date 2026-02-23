@@ -36,6 +36,7 @@ const router = express.Router();
  */
 router.post(
 	'/push-token',
+	authenticate,
 	pushTokenController.validatePushToken,
 	pushTokenController.registerPushToken
 );

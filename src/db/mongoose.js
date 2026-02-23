@@ -8,7 +8,7 @@ const connectMongo = async () => {
   }
   mongoose.set('strictQuery', true);
   await mongoose.connect(mongoUri);
-  logger.info('Connected to MongoDB', { mongoUri });
+  logger.info('Connected to MongoDB');
 };
 
 module.exports = connectMongo;

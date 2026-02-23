@@ -14,7 +14,7 @@ const sign = (user) => {
       email: user.email,
     },
     jwtSecret,
-    { expiresIn: '12h' }
+    { expiresIn: '1h' }
   );
 };
 
