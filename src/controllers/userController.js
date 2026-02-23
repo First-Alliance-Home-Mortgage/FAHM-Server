@@ -178,9 +178,11 @@ exports.updateUser = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return next(createError(400, { errors: errors.array() }));
-    const patch = { ...req.body };
-    // Do not allow password updates via this endpoint
-    delete patch.password;
+    const allowed = ['name', 'email', 'phone', 'role', 'title', 'branch', 'isActive'];
+    const patch = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) patch[key] = req.body[key];
+    }
     if (patch.role) {
       const roleExists = await Role.findById(patch.role);
       if (!roleExists) return next(createError(400, 'Invalid role'));

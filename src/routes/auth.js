@@ -3,10 +3,20 @@ const { body } = require('express-validator');
 const roles = require('../config/roles');
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
+const { rateLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-const passwordValidator = body('password').isLength({ min: 6 }).withMessage('Password min 6 chars');
+// Rate limiters for auth endpoints
+const authLimiter = rateLimiter({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many authentication attempts, please try again later' });
+const refreshLimiter = rateLimiter({ windowMs: 15 * 60 * 1000, max: 30, message: 'Too many refresh attempts, please try again later' });
+
+const passwordValidator = body('password')
+  .isLength({ min: 12 }).withMessage('Password must be at least 12 characters')
+  .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+  .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+  .matches(/\d/).withMessage('Password must contain at least one number')
+  .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage('Password must contain at least one special character');
 
 /**
  * @swagger
@@ -88,12 +98,22 @@ const passwordValidator = body('password').isLength({ min: 6 }).withMessage('Pas
  */
 router.post(
   '/register',
+  authLimiter,
   [
     body('name').notEmpty().withMessage('Name required'),
     body('email').isEmail().withMessage('Valid email required'),
     passwordValidator,
-    // Normalize role to lowercase before validating so clients can send either case.
-    body('role').optional().toLowerCase().isIn(roles.ROLE_SLUGS),
+    // Self-registration is restricted to borrower role only.
+    // Admin-created users can have any role via the /users endpoint.
+    body('role')
+      .optional()
+      .toLowerCase()
+      .custom((value) => {
+        if (value && value !== 'borrower') {
+          throw new Error('Self-registration is restricted to the borrower role');
+        }
+        return true;
+      }),
   ],
   authController.register
 );
@@ -156,7 +176,8 @@ router.post(
  */
 router.post(
   '/login',
-  [body('email').isEmail(), passwordValidator.withMessage('Password required')],
+  authLimiter,
+  [body('email').isEmail(), passwordValidator],
   authController.login
 );
 
@@ -195,6 +216,7 @@ router.post(
  */
 router.post(
   '/refresh',
+  refreshLimiter,
   [body('refreshToken').isString().withMessage('Refresh token required')],
   authController.refresh
 );

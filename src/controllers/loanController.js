@@ -15,7 +15,7 @@ exports.list = async (req, res, next) => {
 
     const { status, source, assignedOfficer, q, dateFrom, dateTo } = req.query;
     const page = req.query.page || 1;
-    const limit = req.query.limit || 20;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
     const sort = req.query.sort || '-createdAt';
 
     const filter = {};

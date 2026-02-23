@@ -4,12 +4,12 @@ const auditLogsController = require('../controllers/auditLogsController');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // GET /api/v1/audit-logs/consent
-router.get('/consent', authenticate, authorize({ capabilities: ['audit:view'] }), auditLogsController.getConsentLogs);
+router.get('/consent', authenticate, authorize({ roles: ['admin'], capabilities: ['audit:view'] }), auditLogsController.getConsentLogs);
 
 // GET /api/v1/audit-logs/crm
-router.get('/crm', authenticate, authorize({ capabilities: ['audit:view'] }), auditLogsController.getCrmLogs);
+router.get('/crm', authenticate, authorize({ roles: ['admin'], capabilities: ['audit:view'] }), auditLogsController.getCrmLogs);
 
 // GET /api/v1/audit-logs/credit
-router.get('/credit', authenticate, authorize({ capabilities: ['audit:view'] }), auditLogsController.getCreditLogs);
+router.get('/credit', authenticate, authorize({ roles: ['admin'], capabilities: ['audit:view'] }), auditLogsController.getCreditLogs);
 
 module.exports = router;

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 const createError = require('http-errors');
 const mongoose = require('mongoose');
@@ -9,6 +10,7 @@ const EncompassSyncLog = require('../models/EncompassSyncLog');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const escapeRegex = require('../utils/escapeRegex');
+const { integrations } = require('../config/env');
 
 const STAFF_ROLES = ['loan_officer_tpo', 'loan_officer_retail', 'admin'];
 const BORROWER_ROLE = 'borrower';
@@ -696,6 +698,24 @@ exports.getPipelineFields = async (_req, res, _next) => {
  */
 exports.webhook = async (req, res, next) => {
   try {
+    // Verify webhook signature when a secret is configured
+    const webhookSecret = integrations.encompassWebhookSecret;
+    if (webhookSecret) {
+      const signature = req.headers['x-webhook-signature'] || req.headers['x-signature'];
+      if (!signature) {
+        logger.warn('Webhook request missing signature header');
+        return res.status(401).json({ error: 'Missing webhook signature' });
+      }
+      const payload = JSON.stringify(req.body);
+      const expected = crypto.createHmac('sha256', webhookSecret).update(payload).digest('hex');
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+        logger.warn('Webhook signature verification failed');
+        return res.status(401).json({ error: 'Invalid webhook signature' });
+      }
+    } else {
+      logger.warn('ENCOMPASS_WEBHOOK_SECRET not set – webhook signature verification skipped');
+    }
+
     const { eventType, resourceType, resourceId, data } = req.body;
 
     logger.info('Received webhook', { eventType, resourceType, resourceId });

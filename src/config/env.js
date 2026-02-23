@@ -73,7 +73,7 @@ module.exports = {
     otelEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
   },
   security: {
-    corsOrigins: process.env.CORS_ORIGINS || '*',
+    corsOrigins: process.env.CORS_ORIGINS || '',
   },
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
