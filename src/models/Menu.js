@@ -11,7 +11,7 @@ const menuSchema = new mongoose.Schema({
   order: { type: Number, required: true },
   visible: { type: Boolean, required: true },
   override: { type: Boolean, default: false },
-  roles: { type: [String], required: true },
+  roles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role' }],
   analytics: {
     views: { type: Number },
     uniqueUsers: { type: Number },

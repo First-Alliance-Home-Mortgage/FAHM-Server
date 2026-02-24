@@ -4,20 +4,32 @@ const createError = require('http-errors');
 const { body, validationResult } = require('express-validator');
 const menuService = require('../services/menuService');
 const { audit } = require('../utils/audit');
+const Role = require('../models/Role');
+
+// Strip populated role objects back to ObjectIds for clean version storage
+function stripPopulatedRoles(menus) {
+  return menus.map(menu => ({
+    ...menu,
+    roles: (menu.roles || []).map(r => (r && r._id) ? r._id : r),
+  }));
+}
+
 // POST /menus/reset - restore menu config to system default
 const path = require('path');
 exports.resetMenus = async (req, res, next) => {
   try {
     // Load the default menu config from the seedMenus.js file (exports { menus })
     const seedMenusPath = path.resolve(__dirname, '../../scripts/seedMenus.js');
-    const { menus } = require(seedMenusPath);
+    delete require.cache[require.resolve(seedMenusPath)];
+    const { resolveAndBuildMenus } = require(seedMenusPath);
+    const menus = await resolveAndBuildMenus();
     const updatedMenus = await menuService.upsertMenus(menus);
-    // Versioning: save a MenuVersion document
+    // Versioning: save a MenuVersion document with clean ObjectIds (not populated objects)
     const MenuVersion = require('../models/menuVersion');
     const lastVersion = await MenuVersion.findOne().sort({ version: -1 });
     const newVersion = new MenuVersion({
       version: lastVersion ? lastVersion.version + 1 : 1,
-      menus: updatedMenus,
+      menus: stripPopulatedRoles(updatedMenus),
       createdBy: req.user?._id,
       comment: 'System reset',
     });
@@ -30,13 +42,17 @@ exports.resetMenus = async (req, res, next) => {
     next(error);
   }
 };
-// GET /menus/roles - return all available roles
-const { ROLE_SLUGS } = require('../config/roles');
-exports.getMenuRoles = (req, res) => {
-  // Return all valid role slugs as an array
-  res.json(ROLE_SLUGS);
+// GET /menus/roles - return all roles from the database
+exports.getMenuRoles = async (req, res, next) => {
+  try {
+    const roles = await Role.find().select('name slug').lean();
+    res.json(roles);
+  } catch (error) {
+    req.log.error('Error fetching roles', { error });
+    next(error);
+  }
 };
-// Validation array for PUT /menus (expects array of menu objects)
+// Validation array for POST/PUT /menus
 exports.validateMenu = [
   body('alias').isString().withMessage('Menu alias must be a string'),
   body('label').isString().withMessage('Menu label must be a string'),
@@ -46,7 +62,33 @@ exports.validateMenu = [
   body('slug').isString().withMessage('Menu slug must be a string'),
   body('order').isInt({ min: 0 }).withMessage('Menu order must be a non-negative integer'),
   body('visible').isBoolean().withMessage('Menu visible must be a boolean'),
-  body('roles').isArray().withMessage('Menu roles must be an array of role strings'),
+  body('roles').isArray({ min: 1 }).withMessage('Menu roles must be a non-empty array'),
+  body('roles.*').isString().withMessage('Each role must be a string (role ID or slug)'),
+  // Middleware to resolve role slugs to ObjectIds
+  async (req, _res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return next();
+      const roles = req.body.roles;
+      // Check if values are already valid ObjectIds
+      const mongoose = require('mongoose');
+      const allObjectIds = roles.every(r => mongoose.Types.ObjectId.isValid(r));
+      if (allObjectIds) {
+        // Verify they exist in the database
+        const count = await Role.countDocuments({ _id: { $in: roles } });
+        if (count !== roles.length) {
+          return next(createError(400, 'One or more role IDs are invalid'));
+        }
+        return next();
+      }
+      // Treat as slugs and resolve to ObjectIds
+      const roleIds = await menuService.resolveRoleSlugs(roles);
+      req.body.roles = roleIds;
+      next();
+    } catch (error) {
+      next(createError(400, error.message));
+    }
+  },
 ];
 // GET /menus - get all menus
 
@@ -198,13 +240,13 @@ exports.restoreMenuVersion = async (req, res, next) => {
     if (!versionDoc) {
       return next(createError(404, 'Menu version not found'));
     }
-    // Restore menus from this version
+    // Restore menus from this version (upsertMenus handles legacy string slugs, ObjectIds, and populated objects)
     const updatedMenus = await menuService.upsertMenus(versionDoc.menus);
-    // Save a new version for the restore action
+    // Save a new version for the restore action with clean ObjectIds
     const lastVersion = await MenuVersion.findOne().sort({ version: -1 });
     const newVersion = new MenuVersion({
       version: lastVersion ? lastVersion.version + 1 : 1,
-      menus: updatedMenus,
+      menus: stripPopulatedRoles(updatedMenus),
       createdBy: req.user?._id,
       comment: `Restored from version ${versionNum}`,
     });
@@ -217,4 +259,3 @@ exports.restoreMenuVersion = async (req, res, next) => {
     next(error);
   }
 };
-
