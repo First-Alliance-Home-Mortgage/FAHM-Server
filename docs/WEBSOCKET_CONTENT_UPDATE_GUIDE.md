@@ -78,6 +78,10 @@ ws.onerror = (err) => {
 
 ---
 
+## Related Guides
+- **Frontend (Next.js):** `docs/WEBSOCKET_FRONTEND_GUIDE.md` — WebSocketManager class, React hooks, cache invalidation, usage examples
+- **Mobile (React Native / Expo):** `docs/WEBSOCKET_MOBILE_GUIDE.md` — WebSocketManager, Context provider, AppState reconnection, TanStack Query integration
+
 ## References
 - Middleware: `src/middleware/broadcastOnSave.js`
 - WebSocket server: `src/socket/ContentUpdateBroadcaster.js`, `src/socket/index.js`

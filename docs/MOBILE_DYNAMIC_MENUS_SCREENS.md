@@ -39,6 +39,12 @@ The app uses three layers of server-driven UI:
 Each menu item is a document in the `menus` collection:
 
 ```typescript
+interface Role {
+  _id: string;
+  name: string;        // e.g., "admin", "branch manager"
+  slug: string;        // e.g., "admin", "branch_manager"
+}
+
 interface Menu {
   _id: string;
   alias: string;       // Unique identifier (e.g., "pipeline", "my-loan")
@@ -50,7 +56,7 @@ interface Menu {
   order: number;       // Sort position within type (0-based)
   visible: boolean;    // Show/hide toggle
   override: boolean;   // Whether admin has overridden defaults
-  roles: string[];     // Role slugs that can see this item
+  roles: Role[];       // Populated Role objects (ObjectId refs to Role collection)
   content: any | null; // Optional embedded content payload
   analytics: {
     views?: number;
@@ -62,6 +68,10 @@ interface Menu {
 }
 ```
 
+> **Note:** The `roles` field is stored as an array of `ObjectId` references to the `Role` collection.
+> All GET endpoints return populated role objects (`{ _id, name, slug }`).
+> POST/PUT endpoints accept either **Role ObjectIds** or **role slugs** (auto-resolved to ObjectIds server-side).
+
 ### Menu API Endpoints
 
 | Method | Endpoint | Auth | Description |
@@ -70,7 +80,7 @@ interface Menu {
 | GET | `/api/v1/menus/grouped` | Authenticated | Get menus grouped by type |
 | GET | `/api/v1/menus/:id` | Authenticated | Get menu by MongoDB ID |
 | GET | `/api/v1/menus/alias/:alias` | Authenticated | Get menu by alias |
-| GET | `/api/v1/menus/roles` | Admin | Get all available role slugs |
+| GET | `/api/v1/menus/roles` | Admin | Get all available roles (`{ _id, name, slug }[]`) |
 | GET | `/api/v1/menus/versions` | Admin | Get menu version history |
 | POST | `/api/v1/menus` | Admin | Create a new menu |
 | PUT | `/api/v1/menus/:id` | Admin | Update a menu |
@@ -94,13 +104,38 @@ interface Menu {
     "order": 4,
     "visible": true,
     "override": false,
-    "roles": ["admin", "loan_officer_tpo", "loan_officer_retail", "branch_manager"],
+    "roles": [
+      { "_id": "67a1...", "name": "admin", "slug": "admin" },
+      { "_id": "67a2...", "name": "loan officer tpo", "slug": "loan_officer_tpo" },
+      { "_id": "67a3...", "name": "loan officer retail", "slug": "loan_officer_retail" },
+      { "_id": "67a4...", "name": "branch manager", "slug": "branch_manager" }
+    ],
     "content": null,
     "analytics": {},
     "createdAt": "2026-02-24T00:00:00.000Z",
     "updatedAt": "2026-02-24T00:00:00.000Z"
   }
 ]
+```
+
+### POST/PUT /menus Request Body (roles)
+
+When creating or updating a menu, the `roles` field accepts either **ObjectIds** or **role slugs**:
+
+```json
+// Using role slugs (auto-resolved to ObjectIds)
+{
+  "alias": "pipeline",
+  "roles": ["admin", "loan_officer_tpo", "loan_officer_retail", "branch_manager"],
+  ...
+}
+
+// Using ObjectIds directly
+{
+  "alias": "pipeline",
+  "roles": ["67a1b2c3d4e5f6...", "67a2b3c4d5e6f7..."],
+  ...
+}
 ```
 
 ### GET /menus/grouped Response
@@ -162,10 +197,11 @@ export function useMenus() {
       .then((res) => res.json())
       .then((data) => {
         // Filter by role + visibility on the client
-        const roleSlug = user.role.slug;
+        // roles is now an array of populated Role objects
+        const userRoleSlug = user.role.slug;
         const filter = (items: Menu[]) =>
           items
-            .filter((m) => m.visible && m.roles.includes(roleSlug))
+            .filter((m) => m.visible && m.roles.some((r) => r.slug === userRoleSlug))
             .sort((a, b) => a.order - b.order);
 
         setMenus({
@@ -221,12 +257,15 @@ Every admin mutation (create, update, delete, reset, restore) creates a `MenuVer
 interface MenuVersion {
   _id: string;
   version: number;     // Auto-incrementing
-  menus: Menu[];       // Snapshot of all menus at this version
+  menus: Menu[];       // Snapshot of all menus at this version (roles stored as ObjectIds)
   createdBy: string;   // User ID of admin who made the change
   createdAt: string;
   comment: string;     // e.g., "System reset", "Restored from version 3"
 }
 ```
+
+> **Note:** Version snapshots store `roles` as raw ObjectIds (not populated objects) for clean storage.
+> When restoring a version, the server automatically handles legacy snapshots that stored roles as string slugs.
 
 Admins can view history with `GET /menus/versions` and restore any previous version with `POST /menus/restore/:version`.
 
@@ -909,7 +948,8 @@ function App() {
    |  Returns: token, refreshToken, user (with role + capabilities)
    |
 3. Fetch menus -> GET /menus/grouped
-   |  Filter by user.role.slug + visible
+   |  Roles returned as populated objects: { _id, name, slug }
+   |  Filter by menu.roles.some(r => r.slug === user.role.slug) + visible
    |  Build tab bar, drawer, stack navigation
    |
 4. Fetch feature flags -> GET /cms/feature-flags
@@ -950,6 +990,12 @@ node scripts/seedCms.js             # 6. CMS screens, nav configs, flags, compon
 ```typescript
 // types/cms.ts
 
+export interface Role {
+  _id: string;
+  name: string;
+  slug: string;
+}
+
 export interface Menu {
   _id: string;
   alias: string;
@@ -961,7 +1007,7 @@ export interface Menu {
   order: number;
   visible: boolean;
   override: boolean;
-  roles: string[];
+  roles: Role[];        // Populated Role objects from ObjectId refs
   content: any | null;
   analytics: {
     views?: number;
@@ -1099,10 +1145,15 @@ export interface ViewConfiguration {
 export interface MenuVersion {
   _id: string;
   version: number;
-  menus: Menu[];
+  menus: Menu[];        // Roles stored as ObjectIds in snapshots (not populated)
   createdBy: string;
   createdAt: string;
   comment: string;
+}
+
+// Helper: check if user's role matches a menu's roles
+export function userCanSeeMenu(menu: Menu, userRoleSlug: string): boolean {
+  return menu.visible && menu.roles.some((r) => r.slug === userRoleSlug);
 }
 
 export interface ContentEvent {

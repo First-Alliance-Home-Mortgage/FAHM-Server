@@ -62,7 +62,7 @@ Fired when a CMS screen is created, updated, or published.
 ```
 
 ### `content_updated`
-Generic content change event (manually triggered by admin via REST).
+Fired when CMS content is changed — navigation configs, feature flags, or manually triggered by admin via REST.
 
 ```json
 {
@@ -437,17 +437,25 @@ If WebSocket events are not being received:
 
 These backend operations automatically broadcast WebSocket events via the `broadcastOnSave` middleware:
 
-| Operation | Event |
-|---|---|
-| `POST /api/v1/menus` | `menu_updated` |
-| `PUT /api/v1/menus/:id` | `menu_updated` |
-| `PATCH /api/v1/menus/:id/visibility` | `menu_updated` |
-| `DELETE /api/v1/menus/:id` | `menu_updated` |
-| `POST /api/v1/menus/reset` | `menu_updated` |
-| `POST /api/v1/menus/restore/:version` | `menu_updated` |
-| `POST /api/v1/cms/screens` | `screen_updated` |
-| `PATCH /api/v1/cms/screens/:slug` | `screen_updated` |
-| `POST /api/v1/cms/screens/:slug/publish` | `screen_updated` |
-| `POST /api/v1/content-updates/notify` | `content_updated` |
-| `POST /api/v1/content-updates/menu-updated` | `menu_updated` |
-| `POST /api/v1/content-updates/screen-updated` | `screen_updated` |
+| Operation | Event | Middleware |
+|---|---|---|
+| **Menus** | | |
+| `POST /api/v1/menus` | `menu_updated` | `broadcastOnMenuSave` |
+| `PUT /api/v1/menus/:id` | `menu_updated` | `broadcastOnMenuSave` |
+| `PATCH /api/v1/menus/:id/visibility` | `menu_updated` | `broadcastOnMenuSave` |
+| `DELETE /api/v1/menus/:id` | `menu_updated` | `broadcastOnMenuSave` |
+| `POST /api/v1/menus/reset` | `menu_updated` | `broadcastOnMenuSave` |
+| `POST /api/v1/menus/restore/:version` | `menu_updated` | `broadcastOnMenuSave` |
+| `PUT /api/v1/menu-config` | `menu_updated` | `broadcastOnMenuSave` |
+| **CMS Screens** | | |
+| `POST /api/v1/cms/screens` | `screen_updated` | `broadcastOnScreenSave` |
+| `PATCH /api/v1/cms/screens/:slug` | `screen_updated` | `broadcastOnScreenSave` |
+| `POST /api/v1/cms/screens/:slug/publish` | `screen_updated` | `broadcastOnScreenSave` |
+| **CMS Navigation & Feature Flags** | | |
+| `PUT /api/v1/cms/navigation-configs` | `content_updated` | `broadcastOnContentSave` |
+| `PUT /api/v1/cms/feature-flags` | `content_updated` | `broadcastOnContentSave` |
+| `PATCH /api/v1/cms/feature-flags/:key` | `content_updated` | `broadcastOnContentSave` |
+| **Manual Triggers (Admin REST)** | | |
+| `POST /api/v1/content-updates/notify` | `content_updated` | direct call |
+| `POST /api/v1/content-updates/menu-updated` | `menu_updated` | direct call |
+| `POST /api/v1/content-updates/screen-updated` | `screen_updated` | direct call |

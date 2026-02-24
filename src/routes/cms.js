@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middleware/auth');
 const personaViewController = require('../controllers/personaViewController');
+const { broadcastOnScreenSave, broadcastOnContentSave } = require('../middleware/broadcastOnSave');
 
 const cmsScreens = require('../controllers/cmsScreensController');
 const cmsNav = require('../controllers/cmsNavigationController');
@@ -64,6 +65,7 @@ router.post(
 	authenticate,
 	authorize({ roles: ['admin'] }),
 	cmsScreens.validateCreate,
+	broadcastOnScreenSave,
 	cmsScreens.create
 );
 router.patch(
@@ -71,12 +73,14 @@ router.patch(
 	authenticate,
 	authorize({ roles: ['admin'] }),
 	cmsScreens.validatePatch,
+	broadcastOnScreenSave,
 	cmsScreens.patch
 );
 router.post(
 	'/screens/:slug/publish',
 	authenticate,
 	authorize({ roles: ['admin'] }),
+	broadcastOnScreenSave,
 	cmsScreens.publish
 );
 
@@ -99,6 +103,7 @@ router.put(
 	authenticate,
 	authorize({ roles: ['admin'] }),
 	cmsNav.validateUpsert,
+	broadcastOnContentSave,
 	cmsNav.upsert
 );
 
@@ -121,6 +126,7 @@ router.put(
 	authenticate,
 	authorize({ roles: ['admin'] }),
 	cmsFlags.validateUpsert,
+	broadcastOnContentSave,
 	cmsFlags.upsert
 );
 router.patch(
@@ -128,6 +134,7 @@ router.patch(
 	authenticate,
 	authorize({ roles: ['admin'] }),
 	cmsFlags.validateToggle,
+	broadcastOnContentSave,
 	cmsFlags.toggle
 );
 

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "FAHM API",
-    "description": "FAHM Server REST API v1 - Node.js/Express backend for loan application management.\n\nMongoDB-only. 180+ endpoints across 31 route groups.\nAuth: JWT Bearer + Refresh Token rotation.\nRBAC: Database-driven roles & capabilities.\n\nUpdated: 2026-02-23",
+    "description": "FAHM Server REST API v1 - Node.js/Express backend for loan application management.\n\nMongoDB-only. 180+ endpoints across 31 route groups.\nAuth: JWT Bearer + Refresh Token rotation.\nRBAC: Database-driven roles & capabilities.\n\nMenu roles are ObjectId references to the Role collection. POST/PUT endpoints accept either Role ObjectIds or role slugs (auto-resolved server-side). GET endpoints return populated role objects ({ _id, name, slug }).\n\nUpdated: 2026-02-25",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -97,7 +97,9 @@
                 "exec": [
                   "const json = pm.response.json();",
                   "if (json.token) { pm.collectionVariables.set('authToken', json.token); }",
-                  "if (json.refreshToken) { pm.collectionVariables.set('refreshToken', json.refreshToken); }"
+                  "if (json.refreshToken) { pm.collectionVariables.set('refreshToken', json.refreshToken); }",
+                  "if (json.user && json.user._id) { pm.collectionVariables.set('userId', json.user._id); }",
+                  "if (json.user && json.user.role && json.user.role._id) { pm.collectionVariables.set('roleId', json.user.role._id); }"
                 ]
               }
             }
@@ -2892,15 +2894,27 @@
       "item": [
         {
           "name": "Get All Menus",
-          "request": { "method": "GET", "url": "{{baseUrl}}/menus" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/menus",
+            "description": "Returns all menus sorted by type and order. Roles are populated as objects ({ _id, name, slug })."
+          }
         },
         {
           "name": "Get Menu Roles (Admin)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/menus/roles" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/menus/roles",
+            "description": "Returns all Role documents from the database ({ _id, name, slug }). Use these IDs or slugs when creating/updating menus."
+          }
         },
         {
           "name": "Get Grouped Menus",
-          "request": { "method": "GET", "url": "{{baseUrl}}/menus/grouped" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/menus/grouped",
+            "description": "Returns menus grouped by type (drawer, tab, stack). Roles are populated as objects ({ _id, name, slug }). Filter client-side by menu.roles.some(r => r.slug === userRoleSlug)."
+          }
         },
         {
           "name": "Get Menu Versions (Admin)",
@@ -2908,17 +2922,26 @@
         },
         {
           "name": "Get Menu by ID",
-          "request": { "method": "GET", "url": "{{baseUrl}}/menus/{{menuId}}" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/menus/{{menuId}}",
+            "description": "Returns a single menu with populated role objects."
+          }
         },
         {
           "name": "Get Menu by Alias",
-          "request": { "method": "GET", "url": "{{baseUrl}}/menus/alias/{{menuAlias}}" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/menus/alias/{{menuAlias}}",
+            "description": "Returns a single menu by alias with populated role objects."
+          }
         },
         {
           "name": "Create Menu (Admin)",
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/menus",
+            "description": "Create a new menu item. The 'roles' field accepts either Role ObjectIds or role slug strings (auto-resolved to ObjectIds). Response returns populated role objects.",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
@@ -2931,6 +2954,7 @@
           "request": {
             "method": "PUT",
             "url": "{{baseUrl}}/menus/{{menuId}}",
+            "description": "Update an existing menu item. The 'roles' field accepts either Role ObjectIds or role slug strings (auto-resolved to ObjectIds). Response returns populated role objects.",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
