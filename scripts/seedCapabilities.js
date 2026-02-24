@@ -100,18 +100,30 @@ async function seedCapabilities() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
 
-    console.log('Cleaning up existing capabilities...');
-    const deleteResult = await Capability.deleteMany({});
-    console.log(`Deleted ${deleteResult.deletedCount} existing capabilities`);
+    console.log('Upserting capabilities (preserving existing ObjectIds)...\n');
 
-    console.log('Seeding capabilities...');
+    let created = 0;
+    let updated = 0;
 
     for (const capData of ALL_CAPABILITIES) {
-      await Capability.create(capData);
-      console.log(`  ✓ ${capData.category.padEnd(14)} ${capData.name}`);
+      const result = await Capability.findOneAndUpdate(
+        { name: capData.name },
+        { $set: capData },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      const wasNew = result.createdAt?.getTime() === result.updatedAt?.getTime();
+      if (wasNew) created++; else updated++;
+      console.log(`  ${wasNew ? '+ created' : '~ updated'} ${capData.category.padEnd(14)} ${capData.name}`);
     }
 
-    console.log(`\nSuccessfully seeded ${ALL_CAPABILITIES.length} capabilities`);
+    // Remove capabilities no longer in the seed list
+    const seedNames = ALL_CAPABILITIES.map(c => c.name);
+    const removed = await Capability.deleteMany({ name: { $nin: seedNames } });
+    if (removed.deletedCount > 0) {
+      console.log(`\n  Removed ${removed.deletedCount} obsolete capabilities`);
+    }
+
+    console.log(`\nDone: ${created} created, ${updated} updated, ${removed.deletedCount} removed`);
     process.exit(0);
   } catch (err) {
     console.error('Error seeding capabilities:', err);

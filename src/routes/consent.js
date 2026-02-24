@@ -67,7 +67,7 @@ const router = express.Router();
 router.post(
   '/request',
   authenticate,
-  authorize({ roles: [roles.REALTOR, roles.BROKER, roles.LO_RETAIL, roles.LO_TPO] }),
+  authorize({ roles: [roles.ADMIN, roles.REALTOR, roles.BROKER, roles.LO_RETAIL, roles.LO_TPO] }),
   [
     body('borrowerId').notEmpty().withMessage('Borrower ID is required'),
     body('dataScope').isObject().withMessage('Data scope must be an object'),

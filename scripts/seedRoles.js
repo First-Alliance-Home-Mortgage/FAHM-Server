@@ -296,11 +296,10 @@ async function seedRoles() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
 
-    console.log('Cleaning up existing roles...');
-    const deleteResult = await Role.deleteMany({});
-    console.log(`Deleted ${deleteResult.deletedCount} existing roles`);
+    console.log('Upserting roles with capabilities (preserving existing ObjectIds)...\n');
 
-    console.log('Seeding roles with capabilities...\n');
+    let created = 0;
+    let updated = 0;
 
     for (const roleData of ROLES_WITH_CAPABILITIES) {
       // Find capability ObjectIds by name
@@ -314,19 +313,28 @@ async function seedRoles() {
       const foundNames = capabilityDocs.map(cap => cap.name);
       const missing = roleData.capabilities.filter(c => !foundNames.includes(c));
       if (missing.length > 0) {
-        console.warn(`  ⚠ Role "${roleData.name}" references missing capabilities: ${missing.join(', ')}`);
+        console.warn(`  WARNING: Role "${roleData.name}" references missing capabilities: ${missing.join(', ')}`);
       }
 
-      // Create new role
-      await Role.create({
-        name: roleData.name,
-        slug: roleData.slug,
-        capabilities: capabilityIds
-      });
-      console.log(`  ✓ Role "${roleData.name}" (slug: ${roleData.slug}) → ${capabilityIds.length} capabilities`);
+      // Upsert role by slug (preserves ObjectId for existing roles)
+      const result = await Role.findOneAndUpdate(
+        { slug: roleData.slug },
+        { $set: { name: roleData.name, slug: roleData.slug, capabilities: capabilityIds } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      const wasNew = result.createdAt?.getTime() === result.updatedAt?.getTime();
+      if (wasNew) created++; else updated++;
+      console.log(`  ${wasNew ? '+ created' : '~ updated'} Role "${roleData.name}" (slug: ${roleData.slug}) -> ${capabilityIds.length} capabilities`);
     }
 
-    console.log('\nRoles seeded successfully');
+    // Remove roles no longer in the seed list
+    const seedSlugs = ROLES_WITH_CAPABILITIES.map(r => r.slug);
+    const removed = await Role.deleteMany({ slug: { $nin: seedSlugs } });
+    if (removed.deletedCount > 0) {
+      console.log(`\n  Removed ${removed.deletedCount} obsolete roles`);
+    }
+
+    console.log(`\nDone: ${created} created, ${updated} updated, ${removed.deletedCount} removed`);
     process.exit(0);
   } catch (err) {
     console.error('Error seeding roles:', err);

@@ -31,10 +31,10 @@ exports.resetMenus = async (req, res, next) => {
   }
 };
 // GET /menus/roles - return all available roles
-const { roles: rolesMap } = require('../config/roles');
+const { ROLE_SLUGS } = require('../config/roles');
 exports.getMenuRoles = (req, res) => {
-  // Return all role values as an array
-  res.json(Object.values(rolesMap));
+  // Return all valid role slugs as an array
+  res.json(ROLE_SLUGS);
 };
 // Validation array for PUT /menus (expects array of menu objects)
 exports.validateMenu = [
