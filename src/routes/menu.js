@@ -26,7 +26,7 @@ router.post('/reset', authenticate, authorize({ roles: ['admin'] }), broadcastOn
 // POST /menus - admin only
 router.post('/', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, broadcastOnMenuSave, menuController.createMenu);
 // PUT /menus/:id - admin only
-router.put('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenu, broadcastOnMenuSave, menuController.updateMenu);
+router.put('/:id', authenticate, authorize({ roles: ['admin'] }), menuController.validateMenuUpdate, broadcastOnMenuSave, menuController.updateMenu);
 // PATCH /menus/:id/visibility - admin only
 router.patch('/:id/visibility', authenticate, authorize({ roles: ['admin'] }), broadcastOnMenuSave, menuController.updateMenuVisibility);
 // DELETE /menus/:id - admin only

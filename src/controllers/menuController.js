@@ -52,7 +52,39 @@ exports.getMenuRoles = async (req, res, next) => {
     next(error);
   }
 };
-// Validation array for POST/PUT /menus
+// Shared role-resolution middleware (used by both create and update validators)
+const mongoose = require('mongoose');
+function isObjectIdString(val) {
+  return typeof val === 'string'
+    && mongoose.Types.ObjectId.isValid(val)
+    && String(new mongoose.Types.ObjectId(val)) === val;
+}
+
+async function resolveRolesMiddleware(req, _res, next) {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return next();
+    const roles = req.body.roles;
+    if (!roles) return next();
+    // Check if values are already valid ObjectId strings
+    const allObjectIds = roles.every(isObjectIdString);
+    if (allObjectIds) {
+      const count = await Role.countDocuments({ _id: { $in: roles } });
+      if (count !== roles.length) {
+        return next(createError(400, 'One or more role IDs are invalid'));
+      }
+      return next();
+    }
+    // Treat as slugs and resolve to ObjectIds
+    const roleIds = await menuService.resolveRoleSlugs(roles);
+    req.body.roles = roleIds;
+    next();
+  } catch (error) {
+    next(createError(400, error.message));
+  }
+}
+
+// Validation for POST /menus (all fields required)
 exports.validateMenu = [
   body('alias').isString().withMessage('Menu alias must be a string'),
   body('label').isString().withMessage('Menu label must be a string'),
@@ -64,31 +96,22 @@ exports.validateMenu = [
   body('visible').isBoolean().withMessage('Menu visible must be a boolean'),
   body('roles').isArray({ min: 1 }).withMessage('Menu roles must be a non-empty array'),
   body('roles.*').isString().withMessage('Each role must be a string (role ID or slug)'),
-  // Middleware to resolve role slugs to ObjectIds
-  async (req, _res, next) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) return next();
-      const roles = req.body.roles;
-      // Check if values are already valid ObjectIds
-      const mongoose = require('mongoose');
-      const allObjectIds = roles.every(r => mongoose.Types.ObjectId.isValid(r));
-      if (allObjectIds) {
-        // Verify they exist in the database
-        const count = await Role.countDocuments({ _id: { $in: roles } });
-        if (count !== roles.length) {
-          return next(createError(400, 'One or more role IDs are invalid'));
-        }
-        return next();
-      }
-      // Treat as slugs and resolve to ObjectIds
-      const roleIds = await menuService.resolveRoleSlugs(roles);
-      req.body.roles = roleIds;
-      next();
-    } catch (error) {
-      next(createError(400, error.message));
-    }
-  },
+  resolveRolesMiddleware,
+];
+
+// Validation for PUT /menus/:id (all fields optional for partial updates)
+exports.validateMenuUpdate = [
+  body('alias').optional().isString().withMessage('Menu alias must be a string'),
+  body('label').optional().isString().withMessage('Menu label must be a string'),
+  body('icon').optional().isString().withMessage('Menu icon must be a string'),
+  body('route').optional().isString().withMessage('Menu route must be a string'),
+  body('type').optional().isIn(['drawer', 'tab', 'stack']).withMessage('Menu type must be one of drawer, tab, or stack'),
+  body('slug').optional().isString().withMessage('Menu slug must be a string'),
+  body('order').optional().isInt({ min: 0 }).withMessage('Menu order must be a non-negative integer'),
+  body('visible').optional().isBoolean().withMessage('Menu visible must be a boolean'),
+  body('roles').optional().isArray({ min: 1 }).withMessage('Menu roles must be a non-empty array'),
+  body('roles.*').optional().isString().withMessage('Each role must be a string (role ID or slug)'),
+  resolveRolesMiddleware,
 ];
 // GET /menus - get all menus
 
