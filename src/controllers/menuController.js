@@ -60,6 +60,18 @@ function isObjectIdString(val) {
     && String(new mongoose.Types.ObjectId(val)) === val;
 }
 
+// Normalize roles array: accepts strings (ObjectId or slug) and populated objects ({ _id })
+function normalizeRolesMiddleware(req, _res, next) {
+  const roles = req.body.roles;
+  if (!Array.isArray(roles)) return next();
+  req.body.roles = roles.map(r => {
+    if (typeof r === 'string') return r;
+    if (r && typeof r === 'object' && r._id) return String(r._id);
+    return r;
+  });
+  next();
+}
+
 async function resolveRolesMiddleware(req, _res, next) {
   try {
     const errors = validationResult(req);
@@ -84,33 +96,42 @@ async function resolveRolesMiddleware(req, _res, next) {
   }
 }
 
+// Role validator: accepts string IDs, slugs, or populated objects with _id
+const isRoleValue = (value) => {
+  if (typeof value === 'string') return true;
+  if (value && typeof value === 'object' && value._id) return true;
+  throw new Error('Each role must be a string (role ID or slug) or an object with _id');
+};
+
 // Validation for POST /menus (all fields required)
 exports.validateMenu = [
+  normalizeRolesMiddleware,
   body('alias').isString().withMessage('Menu alias must be a string'),
   body('label').isString().withMessage('Menu label must be a string'),
   body('icon').isString().withMessage('Menu icon must be a string'),
   body('route').isString().withMessage('Menu route must be a string'),
   body('type').isIn(['drawer', 'tab', 'stack']).withMessage('Menu type must be one of drawer, tab, or stack'),
   body('slug').isString().withMessage('Menu slug must be a string'),
-  body('order').isInt({ min: 0 }).withMessage('Menu order must be a non-negative integer'),
-  body('visible').isBoolean().withMessage('Menu visible must be a boolean'),
+  body('order').custom((v) => Number.isInteger(Number(v)) && Number(v) >= 0).withMessage('Menu order must be a non-negative integer'),
+  body('visible').custom((v) => typeof v === 'boolean' || v === 'true' || v === 'false').withMessage('Menu visible must be a boolean'),
   body('roles').isArray({ min: 1 }).withMessage('Menu roles must be a non-empty array'),
-  body('roles.*').isString().withMessage('Each role must be a string (role ID or slug)'),
+  body('roles.*').custom(isRoleValue),
   resolveRolesMiddleware,
 ];
 
 // Validation for PUT /menus/:id (all fields optional for partial updates)
 exports.validateMenuUpdate = [
+  normalizeRolesMiddleware,
   body('alias').optional().isString().withMessage('Menu alias must be a string'),
   body('label').optional().isString().withMessage('Menu label must be a string'),
   body('icon').optional().isString().withMessage('Menu icon must be a string'),
   body('route').optional().isString().withMessage('Menu route must be a string'),
   body('type').optional().isIn(['drawer', 'tab', 'stack']).withMessage('Menu type must be one of drawer, tab, or stack'),
   body('slug').optional().isString().withMessage('Menu slug must be a string'),
-  body('order').optional().isInt({ min: 0 }).withMessage('Menu order must be a non-negative integer'),
-  body('visible').optional().isBoolean().withMessage('Menu visible must be a boolean'),
+  body('order').optional().custom((v) => Number.isInteger(Number(v)) && Number(v) >= 0).withMessage('Menu order must be a non-negative integer'),
+  body('visible').optional().custom((v) => typeof v === 'boolean' || v === 'true' || v === 'false').withMessage('Menu visible must be a boolean'),
   body('roles').optional().isArray({ min: 1 }).withMessage('Menu roles must be a non-empty array'),
-  body('roles.*').optional().isString().withMessage('Each role must be a string (role ID or slug)'),
+  body('roles.*').optional().custom(isRoleValue),
   resolveRolesMiddleware,
 ];
 // GET /menus - get all menus
