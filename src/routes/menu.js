@@ -14,10 +14,10 @@ router.get('/grouped', authenticate, menuController.getGroupedMenus);
 router.get('/versions', authenticate, authorize({ roles: ['admin'] }), menuController.getMenuVersions);
 // GET /menus - any authenticated user
 router.get('/', authenticate, menuController.getMenus);
-// GET /menus/:id - any authenticated user
-router.get('/:id', authenticate, menuController.getMenuById);
 // GET /menus/alias/:alias - any authenticated user
 router.get('/alias/:alias', authenticate, menuController.getMenuByAlias);
+// GET /menus/:id - any authenticated user
+router.get('/:id', authenticate, menuController.getMenuById);
 
 // POST /menus/restore/:version - admin only
 router.post('/restore/:version', authenticate, authorize({ roles: ['admin'] }), broadcastOnMenuSave, menuController.restoreMenuVersion);
